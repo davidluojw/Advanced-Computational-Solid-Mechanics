@@ -1,5 +1,4 @@
-% This is the Newton-Raphson with line search algorithm solver for HW3
-% Reference: H. Matthies and G. Strange. IJNME, 14 (1979) 1613-1626
+% This is the Newton-Raphson algorithm solver for HW3
 clear all; clc;
 
 %% x =15
@@ -49,12 +48,12 @@ for n = 0:load_num
     R_norm = sqrt(R(1) * R(1) + R(2) * R(2));
     R_norm0 = R_norm;
 
-    while true
-        J(1,1) = dN1_dd1(d(1),d(2));
-        J(1,2) = dN1_dd2(d(1),d(2));
-        J(2,1) = dN2_dd1(d(1),d(2));
-        J(2,2) = dN2_dd2(d(1),d(2));
+    J(1,1) = dN1_dd1(d(1),d(2));
+    J(1,2) = dN1_dd2(d(1),d(2));
+    J(2,1) = dN2_dd1(d(1),d(2));
+    J(2,2) = dN2_dd2(d(1),d(2));
 
+    while true
         Deltad = -J\R;
 
         G0 = Deltad' * R;
@@ -130,6 +129,7 @@ for n = 0:load_num
             end
             s = step;
             % update the new updates
+            d = d - Deltad;
             d = d + s * Deltad;
     
             R(1) = R1(d(1),d(2),n);
@@ -140,10 +140,10 @@ for n = 0:load_num
         if R_norm <= tol * R_norm0
             break;
         end
-    end
+    end  % end of iteration
     iter_num(:,n+1) = iter_step;
     d_sol(:,n+1) = d;
-end
+end % end of load step
 
 
 % plot (a) x = 15
@@ -179,7 +179,6 @@ ylim([0,16]);
 xlabel("load_step");
 ylabel("iterations");
 legend("x = 15",'Location', 'Best', 'FontSize', 14, 'Box', 'on');
-
 
 
 %% x = 25
@@ -229,12 +228,12 @@ for n = 0:load_num
     R_norm = sqrt(R(1) * R(1) + R(2) * R(2));
     R_norm0 = R_norm;
 
-    while true
-        J(1,1) = dN1_dd1(d(1),d(2));
-        J(1,2) = dN1_dd2(d(1),d(2));
-        J(2,1) = dN2_dd1(d(1),d(2));
-        J(2,2) = dN2_dd2(d(1),d(2));
+    J(1,1) = dN1_dd1(d(1),d(2));
+    J(1,2) = dN1_dd2(d(1),d(2));
+    J(2,1) = dN2_dd1(d(1),d(2));
+    J(2,2) = dN2_dd2(d(1),d(2));
 
+    while true
         Deltad = -J\R;
 
         G0 = Deltad' * R;
@@ -310,7 +309,7 @@ for n = 0:load_num
             end
             s = step;
             % update the new updates
-            d = d - Delt
+            d = d - Deltad;
             d = d + s * Deltad;
     
             R(1) = R1(d(1),d(2),n);
@@ -321,10 +320,10 @@ for n = 0:load_num
         if R_norm <= tol * R_norm0
             break;
         end
-    end
+    end  % end of iteration
     iter_num(:,n+1) = iter_step;
     d_sol(:,n+1) = d;
-end
+end % end of load step
 
 
 % plot (a) x = 25
@@ -360,3 +359,6 @@ ylim([0,16]);
 xlabel("load_step");
 ylabel("iterations");
 legend("x = 25",'Location', 'Best', 'FontSize', 14, 'Box', 'on');
+
+
+

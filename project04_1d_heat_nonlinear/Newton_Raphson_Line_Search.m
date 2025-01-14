@@ -36,7 +36,6 @@ tol = 1.0e-4;
 d_sol = zeros(2, load_num + 1);
 d_sol(:,1) = d;
 iter_num = zeros(1, load_num+1);
-R_set = zeros(1, load_num+1);
 
 % line search
 stol = 0.5;
@@ -142,7 +141,6 @@ for n = 0:load_num
             break;
         end
     end
-    R_set(:,n+1) = R_norm;
     iter_num(:,n+1) = iter_step;
     d_sol(:,n+1) = d;
 end
@@ -218,7 +216,6 @@ tol = 1.0e-4;
 d_sol = zeros(2, load_num + 1);
 d_sol(:,1) = d;
 iter_num = zeros(1, load_num+1);
-R_set = zeros(1, load_num+1);
 
 % line search
 stol = 0.5;
@@ -324,7 +321,6 @@ for n = 0:load_num
             break;
         end
     end
-    R_set(:,n+1) = R_norm;
     iter_num(:,n+1) = iter_step;
     d_sol(:,n+1) = d;
 end
