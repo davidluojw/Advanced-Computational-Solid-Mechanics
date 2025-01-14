@@ -41,6 +41,9 @@ max_iter = 15;
 V = zeros(2, max_iter + 1);
 W = zeros(2, max_iter + 1);
 
+% line search
+stol = 0.5;
+
 
 for n = 1:load_num
     iter_step = 0;    % record the iterate numbers
@@ -72,6 +75,8 @@ for n = 1:load_num
     % actually, BFGS is to find d(i+2)
     while true
         iter_step = iter_step + 1;
+
+        G0 = Deltad' * R;
 
         R_tilde = R;  % R_tilde(0) = R(i+1)
 
@@ -108,12 +113,25 @@ for n = 1:load_num
         for k = 1:iter_step
             Deltad_tilde = Deltad_tilde + (W(:, k)' * Deltad_tilde) * V(:, k);
         end
-        % d_old = d;
+        d_old = d;
         d = d + Deltad_tilde;  % d(i+2) = d(i+1) + Deltad_tilde
         Deltad = d - d_old;    % Deltad(i+1) = d(i+2) - d(i+1)
 
         % R(i+2)
         R(1) = R1(d(1),d(2),n);  
+        R(2) = R2(d(1),d(2),n);
+        R_norm = sqrt(R(1) * R(1) + R(2) * R(2));
+
+        G = Deltad' * R;
+
+        % Line Search
+        s = LineSearch(G0,G,d,R1,R2,Deltad,n,stol);
+
+        % update the new updates
+        d = d - Deltad;
+        d = d + s * Deltad;
+    
+        R(1) = R1(d(1),d(2),n);
         R(2) = R2(d(1),d(2),n);
         R_norm = sqrt(R(1) * R(1) + R(2) * R(2));
 
@@ -204,6 +222,9 @@ max_iter = 15;
 V = zeros(2, max_iter + 1);
 W = zeros(2, max_iter + 1);
 
+% line search
+stol = 0.5;
+
 
 for n = 1:load_num
     iter_step = 0;    % record the iterate numbers
@@ -235,6 +256,8 @@ for n = 1:load_num
     % actually, BFGS is to find d(i+2)
     while true
         iter_step = iter_step + 1;
+
+        G0 = Deltad' * R;
 
         R_tilde = R;  % R_tilde(0) = R(i+1)
 
@@ -280,6 +303,19 @@ for n = 1:load_num
         R(2) = R2(d(1),d(2),n);
         R_norm = sqrt(R(1) * R(1) + R(2) * R(2));
 
+        G = Deltad' * R;
+
+        % Line Search
+        s = LineSearch(G0,G,d,R1,R2,Deltad,n,stol);
+
+        % update the new updates
+        d = d - Deltad;
+        d = d + s * Deltad;
+    
+        R(1) = R1(d(1),d(2),n);
+        R(2) = R2(d(1),d(2),n);
+        R_norm = sqrt(R(1) * R(1) + R(2) * R(2));
+
         if R_norm <= tol * R_norm0
             break;
         end
@@ -319,11 +355,9 @@ legend("exact","numerical",'Location', 'Best', 'FontSize', 14, 'Box', 'on');
 figure;
 load_steps = linspace(0,load_num + 1, load_num + 1);
 scatter(load_steps, iter_num, "filled");
-title("iterations vs load_step (x=25)");
+title("iterations vs load_step (x=15)");
 xlim([0,42]);
 ylim([0,16]);
 xlabel("load_step");
 ylabel("iterations");
 legend("x = 25",'Location', 'Best', 'FontSize', 14, 'Box', 'on');
-
-
