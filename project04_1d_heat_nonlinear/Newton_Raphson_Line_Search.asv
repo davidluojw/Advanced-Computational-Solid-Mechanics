@@ -330,7 +330,7 @@ for n = 0:load_num
 end
 
 
-% plot (a) x = 25
+% plot (a) x = 15
 figure;
 d_exact = linspace(-1,7,100);
 N1_exact = N1(d_exact, d_exact);
@@ -338,9 +338,9 @@ plot(d_exact, N1_exact, LineWidth=2);
 title("N1 vs d1");
 xlabel("d1");
 ylabel("N1");
-legend("exact, x=25",'Location', 'Best', 'FontSize', 14, 'Box', 'on');
+legend("exact, x=15",'Location', 'Best', 'FontSize', 14, 'Box', 'on');
 
-%plot (b) x = 25
+%plot (b) x = 15
 figure;
 d_exact = linspace(-1,7,100);
 N1_exact = N1(d_exact, d_exact);
@@ -348,18 +348,18 @@ N1_sol = N1(d_sol(1,:), d_sol(1,:));
 plot(d_exact, N1_exact, LineWidth=2);
 hold on;
 scatter(d_sol(1,:),N1_sol,"filled");
-title("N1 vs d1 (x=25)");
+title("N1 vs d1 (x=15)");
 xlabel("d1");
 ylabel("N1");
 legend("exact","numerical",'Location', 'Best', 'FontSize', 14, 'Box', 'on');
 
-%plot (c)  x= 25
+%plot (c)  x= 15
 figure;
 load_steps = linspace(0,load_num + 1, load_num + 1);
 scatter(load_steps, iter_num, "filled");
-title("iterations vs load_step (x=25)");
+title("iterations vs load_step (x=15)");
 xlim([0,42]);
 ylim([0,16]);
 xlabel("load_step");
 ylabel("iterations");
-legend("x = 25",'Location', 'Best', 'FontSize', 14, 'Box', 'on');
+legend("x = 15",'Location', 'Best', 'FontSize', 14, 'Box', 'on');
