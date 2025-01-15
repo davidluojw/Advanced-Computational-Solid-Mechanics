@@ -76,8 +76,6 @@ for n = 1:load_num
     while true
         iter_step = iter_step + 1;
 
-        G0 = Deltad' * R;
-
         R_tilde = R;  % R_tilde(0) = R(i+1)
 
         % compute update vectors V and W
@@ -94,11 +92,13 @@ for n = 1:load_num
 
         % alpha = (-Delta R(i-k+1) * Delta d(i-k+1) / (R(i-k+1) * Delta d(i-k+1)) )^(1/2)
         %       = (-Delta R(i) * Delta d(i) / (R(i) * Delta d(i) ) )^(1/2)
-        alpha = sqrt(-DeltaR_k' * Deltad_k / (R_old' * Deltad_k));
+        alpha = sqrt( -DeltaR_k' * Deltad_k / (R_old' * Deltad_k) );
 
         % W(i-k+1) = alpha * R(i-k+1) - Delta R(i-k+1)
         %          = alpha * R(i) - Delta R(i)
         W(:,iter_step) = alpha * R_old - DeltaR_k;
+
+        R_old = R;   % R_old = R(i+1)
 
         % Right-side updates
         for k = 1:iter_step
@@ -113,23 +113,25 @@ for n = 1:load_num
         for k = 1:iter_step
             Deltad_tilde = Deltad_tilde + (W(:, k)' * Deltad_tilde) * V(:, k);
         end
-        d_old = d;
-        d = d + Deltad_tilde;  % d(i+2) = d(i+1) + Deltad_tilde
-        Deltad = d - d_old;    % Deltad(i+1) = d(i+2) - d(i+1)
-
+        d_temp = d;                 % d_temp = d(i+1)
+        G0 = Deltad_tilde' * R_old;  % Deltad_tilde *R(i+1)= Deltad(i+1) * R(i+1)
+        d = d_temp + Deltad_tilde;  % d(i+2) = d(i+1) + Deltad_tilde= d(i+1) + Deltad(i+1)
+       
         % R(i+2)
         R(1) = R1(d(1),d(2),n);  
         R(2) = R2(d(1),d(2),n);
         R_norm = sqrt(R(1) * R(1) + R(2) * R(2));
 
-        G = Deltad' * R;
+        
+        G = Deltad_tilde' * R;  % Deltad_i_tilde * R(i+2) = Deltad(i+1) * R(i+2)
 
         % Line Search
-        s = LineSearch(G0,G,d,R1,R2,Deltad,n,stol);
+        s = LineSearch(G0,G,d_temp,R1,R2,Deltad_tilde,n,stol);  % d(i+1), Deltad(i+1)
 
         % update the new updates
-        d = d - Deltad;
-        d = d + s * Deltad;
+        d = d_temp + s * Deltad_tilde;   % d(i+2) = d(i+1) + Deltad(i+1)
+
+        Deltad = d - d_old;    % Deltad(i+1) = d(i+2) - d(i)
     
         R(1) = R1(d(1),d(2),n);
         R(2) = R2(d(1),d(2),n);
@@ -257,8 +259,6 @@ for n = 1:load_num
     while true
         iter_step = iter_step + 1;
 
-        G0 = Deltad' * R;
-
         R_tilde = R;  % R_tilde(0) = R(i+1)
 
         % compute update vectors V and W
@@ -294,24 +294,29 @@ for n = 1:load_num
         for k = 1:iter_step
             Deltad_tilde = Deltad_tilde + (W(:, k)' * Deltad_tilde) * V(:, k);
         end
-        d_old = d;
-        d = d + Deltad_tilde;  % d(i+2) = d(i+1) + Deltad_tilde
-        Deltad = d - d_old;    % Deltad(i+1) = d(i+2) - d(i+1)
+        d_old = d;   % d_old = d(i+1)
+        R_old = R;   % R_old = R(i+1)
 
+        G0 = Deltad_tilde' * R_old;  % Deltad_tilde *R(i+1)= Deltad(i+1) * R(i+1)
+        d = d + Deltad_tilde;    % d(i+2) = d(i+1) + Deltad_tilde= d(i+1) + Deltad(i+1)
+       
         % R(i+2)
         R(1) = R1(d(1),d(2),n);  
         R(2) = R2(d(1),d(2),n);
         R_norm = sqrt(R(1) * R(1) + R(2) * R(2));
 
-        G = Deltad' * R;
+        
+        G = Deltad_tilde' * R;  % Deltad_i_tilde * R(i+2) = Deltad(i+1) * R(i+2)
 
         % Line Search
-        s = LineSearch(G0,G,d,R1,R2,Deltad,n,stol);
+        s = LineSearch(G0,G,d_old,R1,R2,Deltad_tilde,n,stol);  % d(i+1), Deltad(i+1)
 
         % update the new updates
-        d = d - Deltad;
-        d = d + s * Deltad;
-    
+        d = d_old + s * Deltad_tilde;   % d(i+2) = d(i+1) +s* Deltad(i+1)
+
+        Deltad = d - d_old;    % Deltad(i+1) = d(i+2) - d(i+1)
+
+        % R(i+2)
         R(1) = R1(d(1),d(2),n);
         R(2) = R2(d(1),d(2),n);
         R_norm = sqrt(R(1) * R(1) + R(2) * R(2));

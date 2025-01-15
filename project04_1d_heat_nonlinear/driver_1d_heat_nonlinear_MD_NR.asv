@@ -4,7 +4,7 @@ clear all; clc;
 
 % domain
 omega_l = 0.0;
-omega_r = 10.0;
+omega_r = 0.25;
 
 % -------------------------------------------------------------------------
 % material properties and input data
@@ -19,8 +19,8 @@ fun_kappa  = @(u) 1 + u*u;
 fun_dkappa = @(u) 2*u;
 
 f = @(x) -2.0*cos(x)*cos(x)*sin(x) + sin(x)*(sin(x)*sin(x) + 1.0);
-h = @(x) -1.0 * fun_kappa( exact(omega_l) )* exact_x(omega_l);
-g = @(x) exact(omega_r);
+h = @(x) -1.0 * fun_kappa( exact(0) );
+g = @(x) exact();
 % -------------------------------------------------------------------------
 
 % interpolation degree
@@ -61,49 +61,25 @@ LM = ID (IEN);
 n_eq = n_np - 1;
 
 % initial guess
-d = zeros(n_eq,1);      % d(i)
-uh = [ d; g(omega_r) ];
-
-% line search
-stol = 0.5;
+uh = [ zeros(n_eq,1); g(omega_r) ];
 
 counter = 0;
-nmax    = 100;
+nmax    = 10;
 error   = 1.0;
 
 uh_set = zeros(n_np,nmax + 1);
 
 K = AssemblyK(pp,n_eq,n_en,nqp,qp,wq,IEN,ID,nElem,uh,x_coor,fun_kappa,fun_dkappa);
-% F(i)
 F = AssemblyF(pp,n_eq,n_en,nqp,qp,wq,IEN,ID,nElem,uh,x_coor,fun_kappa,fun_dkappa,f,h);
 
 while counter < nmax && error > 1.0e-8
 
     % Solve the stiffness matrix problem
-    Deltad = K \ F;      % Deltad(i)
-    d_temp = d;          % d(i)
-    G0 = Deltad' * F;    % G0 = Deltad(i) * F(i)
-
-    d = d + Deltad;  % d(i+1) = d(i) + Deltad(i)
-    uh = [ d ; g(omega_r) ];
+    incremental = K \ F;
+    uh = [ uh(1:end-1) + incremental; g(omega_r) ];
     
-    % F(i+1)
     F = AssemblyF(pp,n_eq,n_en,nqp,qp,wq,IEN,ID,nElem,uh,x_coor,fun_kappa,fun_dkappa,f,h);
-
-    G = Deltad' * F;   % G = Deltad(i) * F(i+1)
-
-    % d(i), DEltad(i)
-    s = LineSearch_heat(G0,G,Deltad,d_temp,stol,omega_r,g,pp,n_eq,n_en,nqp,qp,wq,IEN,ID,nElem,uh,x_coor,fun_kappa,fun_dkappa,f,h);
-
-    % update the new updates
-    d = d_temp + s * Deltad;   % d(i+1) = d(i) + s*Deltad(i)
-    uh = [d; g(omega_r) ];
-
-    Deltad = d - d_temp;       % Delta(i) = d(i+1) - d(i)  
-    
-    % F(i+1)
-    F = AssemblyF(pp,n_eq,n_en,nqp,qp,wq,IEN,ID,nElem,uh,x_coor,fun_kappa,fun_dkappa,f,h);
-
+  
     error = norm(F);
     counter = counter + 1;
     uh_set(:, counter) = uh;
@@ -141,6 +117,7 @@ xlabel("X");
 ylabel("Temperature");
 legend('FEM','EXACT','Location', 'Best', 'FontSize', 14, 'Box', 'on');
 
+
 % Now we do the postprocessing
 nqp = 6;
 [qp, wq] = Gauss(nqp, -1, 1);
@@ -177,7 +154,7 @@ end
 top = sqrt(top);
 bot = sqrt(bot);
 
-% error = top / bot;
+error = top / bot;
 
 top_u = sqrt(top_u);
 bot_u = sqrt(bot_u);

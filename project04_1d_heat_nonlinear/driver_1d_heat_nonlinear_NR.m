@@ -4,7 +4,7 @@ clear all; clc;
 
 % domain
 omega_l = 0.0;
-omega_r = 1.0;
+omega_r = 10.0;
 
 % -------------------------------------------------------------------------
 % material properties and input data
@@ -19,8 +19,8 @@ fun_kappa  = @(u) 1 + u*u;
 fun_dkappa = @(u) 2*u;
 
 f = @(x) -2.0*cos(x)*cos(x)*sin(x) + sin(x)*(sin(x)*sin(x) + 1.0);
-h = @(x) -1.0 * fun_kappa( exact(0) );
-g = @(x) exact(1);
+h = @(x) -1.0 * fun_kappa( exact(omega_l) )* exact_x(omega_l);
+g = @(x) exact(omega_r);
 % -------------------------------------------------------------------------
 
 % interpolation degree
@@ -64,7 +64,7 @@ n_eq = n_np - 1;
 uh = [ zeros(n_eq,1); g(omega_r) ];
 
 counter = 0;
-nmax    = 5;
+nmax    = 100;
 error   = 1.0;
 
 uh_set = zeros(n_np,nmax + 1);
@@ -151,7 +151,7 @@ end
 top = sqrt(top);
 bot = sqrt(bot);
 
-error = top / bot;
+% error = top / bot;
 
 top_u = sqrt(top_u);
 bot_u = sqrt(bot_u);

@@ -108,7 +108,8 @@ for n = 1:load_num
         for k = 1:iter_step
             Deltad_tilde = Deltad_tilde + (W(:, k)' * Deltad_tilde) * V(:, k);
         end
-        % d_old = d;
+        d_old = d;   % d_old = d(i+1)
+        R_old = R;   % R_old = R(i+1)
         d = d + Deltad_tilde;  % d(i+2) = d(i+1) + Deltad_tilde
         Deltad = d - d_old;    % Deltad(i+1) = d(i+2) - d(i+1)
 
@@ -252,11 +253,11 @@ for n = 1:load_num
 
         % alpha = (-Delta R(i-k+1) * Delta d(i-k+1) / (R(i-k+1) * Delta d(i-k+1)) )^(1/2)
         %       = (-Delta R(i) * Delta d(i) / (R(i) * Delta d(i) ) )^(1/2)
-        alpha = sqrt(-DeltaR_k' * Deltad_k / (R_old' * Deltad_k));
+        alpha = sqrt( abs( -DeltaR_k' * Deltad_k / (R_old' * Deltad_k) ) );
 
         % W(i-k+1) = alpha * R(i-k+1) - Delta R(i-k+1)
         %          = alpha * R(i) - Delta R(i)
-        W(:,iter_step) = alpha * R_old - DeltaR_k;
+        W(:,iter_step) = -alpha * R_old - DeltaR_k;
 
         % Right-side updates
         for k = 1:iter_step
@@ -271,7 +272,8 @@ for n = 1:load_num
         for k = 1:iter_step
             Deltad_tilde = Deltad_tilde + (W(:, k)' * Deltad_tilde) * V(:, k);
         end
-        d_old = d;
+        d_old = d;   % d_old = d(i+1)
+        R_old = R;   % R_old = R(i+1)
         d = d + Deltad_tilde;  % d(i+2) = d(i+1) + Deltad_tilde
         Deltad = d - d_old;    % Deltad(i+1) = d(i+2) - d(i+1)
 

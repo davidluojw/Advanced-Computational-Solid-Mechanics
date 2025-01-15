@@ -1,4 +1,4 @@
-function [s, d] = LineSearch_heat(G0,G,Deltad,d,stol,omega_r,g,pp,n_eq,n_en,nqp,qp,wq,IEN,ID,nElem,uh,x_coor,fun_kappa,fun_dkappa,f,h)
+function [s] = LineSearch_heat(G0,G,Deltad,d,stol,omega_r,g,pp,n_eq,n_en,nqp,qp,wq,IEN,ID,nElem,uh,x_coor,fun_kappa,fun_dkappa,f,h)
 s = 1;
 % Line Search
 % find a s such that abs(G) <= stol * abs(G0)
@@ -57,7 +57,7 @@ if abs(G) > stol * abs(G0)
     s = step;
     % update the new updates
     % d = d - Deltad;
-    d = d + s * Deltad;
+    % d = d + s * Deltad;
     
 end
 end

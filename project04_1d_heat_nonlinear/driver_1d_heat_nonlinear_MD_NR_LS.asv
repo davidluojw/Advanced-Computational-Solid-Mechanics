@@ -61,8 +61,7 @@ LM = ID (IEN);
 n_eq = n_np - 1;
 
 % initial guess
-d = zeros(n_eq,1);      % d(i)
-uh = [ d; g(omega_r) ];
+uh = [ zeros(n_eq,1); g(omega_r) ];
 
 % line search
 stol = 0.5;
@@ -80,30 +79,24 @@ F = AssemblyF(pp,n_eq,n_en,nqp,qp,wq,IEN,ID,nElem,uh,x_coor,fun_kappa,fun_dkappa
 while counter < nmax && error > 1.0e-8
 
     % Solve the stiffness matrix problem
-    Deltad = K \ F;      % Deltad(i)
-    d_temp = d;          % d(i)
-    G0 = Deltad' * F;    % G0 = Deltad(i) * F(i)
+    incremental = K \ F;    % Deltad
+    G0 = incremental' * F;
 
-    d = d + Deltad;  % d(i+1) = d(i) + Deltad(i)
+    d = uh(1:end-1) + incremental;
+
     uh = [ d ; g(omega_r) ];
     
-    % F(i+1)
     F = AssemblyF(pp,n_eq,n_en,nqp,qp,wq,IEN,ID,nElem,uh,x_coor,fun_kappa,fun_dkappa,f,h);
 
-    G = Deltad' * F;   % G = Deltad(i) * F(i+1)
+    G = incremental' * F;
 
-    % d(i), DEltad(i)
-    s = LineSearch_heat(G0,G,Deltad,d_temp,stol,omega_r,g,pp,n_eq,n_en,nqp,qp,wq,IEN,ID,nElem,uh,x_coor,fun_kappa,fun_dkappa,f,h);
+    [s, d] = LineSearch_heat(G0,G,incremental,d,stol,omega_r,g,pp,n_eq,n_en,nqp,qp,wq,IEN,ID,nElem,uh,x_coor,fun_kappa,fun_dkappa,f,h);
 
-    % update the new updates
-    d = d_temp + s * Deltad;   % d(i+1) = d(i) + s*Deltad(i)
     uh = [d; g(omega_r) ];
 
-    Deltad = d - d_temp;       % Delta(i) = d(i+1) - d(i)  
-    
-    % F(i+1)
     F = AssemblyF(pp,n_eq,n_en,nqp,qp,wq,IEN,ID,nElem,uh,x_coor,fun_kappa,fun_dkappa,f,h);
 
+  
     error = norm(F);
     counter = counter + 1;
     uh_set(:, counter) = uh;
@@ -177,7 +170,7 @@ end
 top = sqrt(top);
 bot = sqrt(bot);
 
-% error = top / bot;
+error = top / bot;
 
 top_u = sqrt(top_u);
 bot_u = sqrt(bot_u);

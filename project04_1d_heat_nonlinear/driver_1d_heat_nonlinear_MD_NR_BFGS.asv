@@ -4,7 +4,7 @@ clear all; clc;
 
 % domain
 omega_l = 0.0;
-omega_r = 1.0;
+omega_r = 10.0;
 
 % -------------------------------------------------------------------------
 % material properties and input data
@@ -19,8 +19,8 @@ fun_kappa  = @(u) 1 + u*u;
 fun_dkappa = @(u) 2*u;
 
 f = @(x) -2.0*cos(x)*cos(x)*sin(x) + sin(x)*(sin(x)*sin(x) + 1.0);
-h = @(x) -1.0 * fun_kappa( exact(0) );
-g = @(x) exact(1);
+h = @(x) -1.0 * fun_kappa( exact(omega_l) )* exact_x(omega_l);
+g = @(x) exact(omega_r);
 % -------------------------------------------------------------------------
 
 % interpolation degree
@@ -65,7 +65,7 @@ d = zeros(n_eq,1);
 uh = [ d; g(omega_r) ];
 
 counter = 0;
-nmax    = 5;
+nmax    = 100;
 error   = 1.0;
 
 % update vectors: V and W
@@ -115,11 +115,13 @@ while counter < nmax && error > 1.0e-8
 
     % alpha = (-Delta F(i-k+1) * Delta d(i-k+1) / (F(i-k+1) * Delta d(i-k+1)) )^(1/2)
     %       = (-Delta F(i) * Delta d(i) / (F(i) * Delta d(i) ) )^(1/2)
-    alpha = sqrt(  abs ( DeltaF_k' * Deltad_k / (F_old' * Deltad_k) )  ) ;
+    alpha = sqrt(  abs( -DeltaF_k' * Deltad_k / (F_old' * Deltad_k)  ) ) ;
 
     % W(i-k+1) = alpha * F(i-k+1) - Delta F(i-k+1)
     %          = alpha * F(i) - Delta F(i)
     W(:,counter) = -alpha * F_old - DeltaF_k;
+
+
 
     % Right-side updates
     for k = 1:counter
@@ -134,8 +136,8 @@ while counter < nmax && error > 1.0e-8
     for k = 1:counter
         Deltad_tilde = Deltad_tilde + (W(:, k)' * Deltad_tilde) * V(:, k);
     end
-
     d_old = d;             % d_old = d(i+1)
+    F_old = F;  % F_old = F(i+1)
     d = d + Deltad_tilde;  % d(i+2) = d(i+1) + Deltad_tilde
     Deltad = d - d_old;    % Deltad(i+1) = d(i+2) - d(i+1)
   
@@ -153,21 +155,17 @@ figure;
 X_h = omega_l: hh/pp :omega_r;
 for i=1:nmax
     Y_h = uh_set(:,i);
-    plot(X_h, Y_h,'b-', 'LineWidth', 2);
+    h_fem = plot(X_h, Y_h,'b-', 'LineWidth', 2);
     hold on;
 end
-% subplot(2,1,1)
-xlabel("X");
-ylabel("Temperature");
-legend('FEM','Location', 'Best', 'FontSize', 14, 'Box', 'on');
-hold on;
-% subplot(2,1,2)
 X = omega_l:0.01:omega_r;
 Y = exact(X);
-plot_exact = plot(X, Y,'r--', 'LineWidth', 2);
+h_exact = plot(X, Y,'r--', 'LineWidth', 2);
+
+legend([h_fem, h_exact], {'FEM', 'EXACT'}, 'Location', 'Best', 'FontSize', 14, 'Box', 'on');
 xlabel("X");
 ylabel("Temperature");
-legend(plot_exact,'EXACT','Location', 'Best', 'FontSize', 14, 'Box', 'on');
+
 figure;
 X_h = omega_l: hh/pp :omega_r;
 Y_h = uh;
@@ -220,7 +218,7 @@ end
 top = sqrt(top);
 bot = sqrt(bot);
 
-error = top / bot;
+% error = top / bot;
 
 top_u = sqrt(top_u);
 bot_u = sqrt(bot_u);
