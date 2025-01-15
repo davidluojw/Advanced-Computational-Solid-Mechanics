@@ -153,7 +153,7 @@ end
 % plot the solution
 figure;
 X_h = omega_l: hh/pp :omega_r;
-for i=1:nmax
+for i=1:counter
     Y_h = uh_set(:,i);
     h_fem = plot(X_h, Y_h,'b-', 'LineWidth', 2);
     hold on;
