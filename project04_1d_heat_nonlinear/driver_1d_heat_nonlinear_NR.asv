@@ -64,14 +64,12 @@ n_eq = n_np - 1;
 uh = [ zeros(n_eq,1); g(omega_r) ];
 
 counter = 0;
-nmax    = 200;
+nmax    = 5;
 error   = 1.0;
 
-
+uh_set = 
 
 while counter < nmax && error > 1.0e-8
-
-  
 
     K = AssemblyK(pp,n_eq,n_en,nqp,qp,wq,IEN,ID,nElem,uh,x_coor,fun_kappa,fun_dkappa);
     F = AssemblyF(pp,n_eq,n_en,nqp,qp,wq,IEN,ID,nElem,uh,x_coor,fun_kappa,fun_dkappa,f,h);
@@ -85,18 +83,22 @@ while counter < nmax && error > 1.0e-8
 end
 
 % plot the solution
-X_h = 0: hh/pp :1;
+figure;
+X_h = omega_l: hh/pp :omega_r;
 Y_h = uh;
 % subplot(2,1,1)
 plot(X_h, Y_h,'b-', 'LineWidth', 2);
-hold on;
+xlabel("X");
+ylabel("Temperature");
+legend('FEM','Location', 'Best', 'FontSize', 14, 'Box', 'on');
+figure;
 % subplot(2,1,2)
-X = 0:0.01:1;
+X = omega_l:0.01:omega_r;
 Y = exact(X);
 plot(X, Y,'r-', 'LineWidth', 2);
 xlabel("X");
 ylabel("Temperature");
-legend('FEM', 'EXACT','Location', 'Best', 'FontSize', 14, 'Box', 'on');
+legend('EXACT','Location', 'Best', 'FontSize', 14, 'Box', 'on');
 
 % Now we do the postprocessing
 nqp = 6;

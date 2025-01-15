@@ -64,10 +64,10 @@ n_eq = n_np - 1;
 uh = [ zeros(n_eq,1); g(omega_r) ];
 
 counter = 0;
-nmax    = 200;
+nmax    = 5;
 error   = 1.0;
 
-
+uh_set = zeros(n_np,nmax + 1);
 
 while counter < nmax && error > 1.0e-8
 
@@ -80,21 +80,40 @@ while counter < nmax && error > 1.0e-8
    
     error = norm(F);
     counter = counter + 1;
+    uh_set(:, counter) = uh;
 end
 
 % plot the solution
-X_h = 0: hh/pp :1;
-Y_h = uh;
-% subplot(2,1,1)
-plot(X_h, Y_h,'b-', 'LineWidth', 2);
-hold on;
-% subplot(2,1,2)
-X = 0:0.01:1;
+figure;
+X_h = omega_l: hh/pp :omega_r;
+for i=1:nmax
+    Y_h = uh_set(:,i);
+    h_fem = plot(X_h, Y_h,'b-', 'LineWidth', 2);
+    hold on;
+end
+X = omega_l:0.01:omega_r;
 Y = exact(X);
-plot(X, Y,'r-', 'LineWidth', 2);
+h_exact = plot(X, Y,'r--', 'LineWidth', 2);
+
+legend([h_fem, h_exact], {'FEM', 'EXACT'}, 'Location', 'Best', 'FontSize', 14, 'Box', 'on');
 xlabel("X");
 ylabel("Temperature");
-legend('FEM', 'EXACT','Location', 'Best', 'FontSize', 14, 'Box', 'on');
+
+figure;
+X_h = omega_l: hh/pp :omega_r;
+Y_h = uh;
+plot(X_h, Y_h,'b-', 'LineWidth', 2);
+% subplot(2,1,1)
+xlabel("X");
+ylabel("Temperature");
+hold on;
+% subplot(2,1,2)
+X = omega_l:0.01:omega_r;
+Y = exact(X);
+plot(X, Y,'r--', 'LineWidth', 2);
+xlabel("X");
+ylabel("Temperature");
+legend('FEM','EXACT','Location', 'Best', 'FontSize', 14, 'Box', 'on');
 
 % Now we do the postprocessing
 nqp = 6;

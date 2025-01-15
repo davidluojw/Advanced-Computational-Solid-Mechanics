@@ -89,7 +89,7 @@ for n = 1:load_num
 
         % alpha = (-Delta R(i-k+1) * Delta d(i-k+1) / (R(i-k+1) * Delta d(i-k+1)) )^(1/2)
         %       = (-Delta R(i) * Delta d(i) / (R(i) * Delta d(i) ) )^(1/2)
-        alpha = sqrt( abs( DeltaR_k' * Deltad_k / (R_old' * Deltad_k) ) );
+        alpha = sqrt( -DeltaR_k' * Deltad_k / (R_old' * Deltad_k) ) );
 
         % W(i-k+1) = alpha * R(i-k+1) - Delta R(i-k+1)
         %          = alpha * R(i) - Delta R(i)

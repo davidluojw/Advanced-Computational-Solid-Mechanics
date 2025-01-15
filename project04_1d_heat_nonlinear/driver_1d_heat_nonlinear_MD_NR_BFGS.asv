@@ -61,27 +61,90 @@ LM = ID (IEN);
 n_eq = n_np - 1;
 
 % initial guess
-uh = [ zeros(n_eq,1); g(omega_r) ];
+d = zeros(n_eq,1);
+uh = [ d; g(omega_r) ];
 
 counter = 0;
-nmax    = 10;
+nmax    = 5;
 error   = 1.0;
+
+% update vectors: V and W
+V = zeros(n_eq, nmax + 1);
+W = zeros(n_eq, nmax + 1);
 
 uh_set = zeros(n_np,nmax + 1);
 
-K = AssemblyK(pp,n_eq,n_en,nqp,qp,wq,IEN,ID,nElem,uh,x_coor,fun_kappa,fun_dkappa);
+% get the difference between first two residual
+% Delta F = F(i+1) - F(i)
+
 F = AssemblyF(pp,n_eq,n_en,nqp,qp,wq,IEN,ID,nElem,uh,x_coor,fun_kappa,fun_dkappa,f,h);
 
-while counter < nmax && error > 1.0e-8
+F_old = F;   % F(i)
+d_old = d;   % d(i)
 
-    % Solve the stiffness matrix problem
-    incremental = K \ F;
-    uh = [ uh(1:end-1) + incremental; g(omega_r) ];
+K = AssemblyK(pp,n_eq,n_en,nqp,qp,wq,IEN,ID,nElem,uh,x_coor,fun_kappa,fun_dkappa);
+
+Deltad = K \ F;      % Deltad(i)
+
+d = d + Deltad;      %d(i+1) = d(i) + Deltad(i)
+uh = [ d; g(omega_r) ];
+
+% This is the new residual F(i+1)
+F = AssemblyF(pp,n_eq,n_en,nqp,qp,wq,IEN,ID,nElem,uh,x_coor,fun_kappa,fun_dkappa,f,h);
+
+
+% BFGS start, solve K_bar * Delta d(i+1) = F(i+1)
+% where Delta d(i+1) = d(i+2) - d(i+1)
+% actually, BFGS is to find d(i+2)
+while counter < nmax && error > 1.0e-8
+    counter = counter + 1;
+
+    F_tilde = F;    % F_tilde(0) = F(i+1)
+
+    % compute update vectors V and W
+    % V(i-k+1) = Deltad(i-k+1) / (Deltad(i-k+1) * DeltaF(i-k+1))
+    % DeltaF(i-k+1) = F(i-k+2) - F(i-k+1)
+    % Deltad(i-k+1) = d(i-k+2) - d(i-k+1)
+
+    % k = 1, i-k+1 = i, i-k+2 = i+1
+    DeltaF_k = F_tilde - F_old;     % Delta F(i-k+1) = Delta F(i) = F(i+1) - F(i)
+    Deltad_k = Deltad;              % Delta d(i-k+1) = Delta d(i) 
+
+    % V(i-k+1) = Deltad(i-k+1) / (Deltad(i-k+1) * DeltaF(i-k+1))
+    V(:,counter) = Deltad_k / (Deltad_k' * DeltaF_k);
+
+    % alpha = (-Delta F(i-k+1) * Delta d(i-k+1) / (F(i-k+1) * Delta d(i-k+1)) )^(1/2)
+    %       = (-Delta F(i) * Delta d(i) / (F(i) * Delta d(i) ) )^(1/2)
+    alpha = sqrt(  abs ( DeltaF_k' * Deltad_k / (F_old' * Deltad_k) )  ) ;
+
+    % W(i-k+1) = alpha * F(i-k+1) - Delta F(i-k+1)
+    %          = alpha * F(i) - Delta F(i)
+    W(:,counter) = -alpha * F_old - DeltaF_k;
+
+    % Right-side updates
+    for k = 1:counter
+        F_tilde = F_tilde + (V(:, counter - k + 1)'* F_tilde) * W(:,counter - k + 1);
+    end
+
+    % Solve intermediate system
+    % Deltad_tilde(0) = K^(-1) * F_tilde(i)
+    Deltad_tilde = K \ F_tilde;
+
+    % Left-side update
+    for k = 1:counter
+        Deltad_tilde = Deltad_tilde + (W(:, k)' * Deltad_tilde) * V(:, k);
+    end
+
+    d_old = d;             % d_old = d(i+1)
+    d = d + Deltad_tilde;  % d(i+2) = d(i+1) + Deltad_tilde
+    Deltad = d - d_old;    % Deltad(i+1) = d(i+2) - d(i+1)
+  
+    uh = [ d ; g(omega_r) ];
     
+    % F(i+2)
     F = AssemblyF(pp,n_eq,n_en,nqp,qp,wq,IEN,ID,nElem,uh,x_coor,fun_kappa,fun_dkappa,f,h);
   
     error = norm(F);
-    counter = counter + 1;
     uh_set(:, counter) = uh;
 end
 
@@ -90,17 +153,21 @@ figure;
 X_h = omega_l: hh/pp :omega_r;
 for i=1:nmax
     Y_h = uh_set(:,i);
-    h_fem = plot(X_h, Y_h,'b-', 'LineWidth', 2);
+    plot(X_h, Y_h,'b-', 'LineWidth', 2);
     hold on;
 end
-X = omega_l:0.01:omega_r;
-Y = exact(X);
-h_exact = plot(X, Y,'r--', 'LineWidth', 2);
-
-legend([h_fem, h_exact], {'FEM', 'EXACT'}, 'Location', 'Best', 'FontSize', 14, 'Box', 'on');
+% subplot(2,1,1)
 xlabel("X");
 ylabel("Temperature");
-
+legend('FEM','Location', 'Best', 'FontSize', 14, 'Box', 'on');
+hold on;
+% subplot(2,1,2)
+X = omega_l:0.01:omega_r;
+Y = exact(X);
+plot_exact = plot(X, Y,'r--', 'LineWidth', 2);
+xlabel("X");
+ylabel("Temperature");
+legend(plot_exact,'EXACT','Location', 'Best', 'FontSize', 14, 'Box', 'on');
 figure;
 X_h = omega_l: hh/pp :omega_r;
 Y_h = uh;
@@ -116,7 +183,6 @@ plot(X, Y,'r--', 'LineWidth', 2);
 xlabel("X");
 ylabel("Temperature");
 legend('FEM','EXACT','Location', 'Best', 'FontSize', 14, 'Box', 'on');
-
 
 % Now we do the postprocessing
 nqp = 6;
