@@ -68,19 +68,34 @@ nmax    = 100;
 error   = 1.0;
 
 uh_set = zeros(n_np,nmax + 1);
+error_set = zeros(nmax+1,1);
 
-while counter < nmax && error > 1.0e-8
+counter = counter + 1;
+uh_set(:, counter) = uh;
+
+while counter < nmax
+
+    
+    F = AssemblyF(pp,n_eq,n_en,nqp,qp,wq,IEN,ID,nElem,uh,x_coor,fun_kappa,fun_dkappa,f,h);
+    error = norm(F);
+
+    if error <= 1.0e-8
+        uh_set(:, counter) = uh;
+        error_set(counter, :) = error;
+        break;
+    end
 
     K = AssemblyK(pp,n_eq,n_en,nqp,qp,wq,IEN,ID,nElem,uh,x_coor,fun_kappa,fun_dkappa);
-    F = AssemblyF(pp,n_eq,n_en,nqp,qp,wq,IEN,ID,nElem,uh,x_coor,fun_kappa,fun_dkappa,f,h);
+    uh_set(:, counter) = uh;
+    error_set(counter, :) = error;
 
     % Solve the stiffness matrix problem
     incremental = K \ F;
     uh = [ uh(1:end-1) + incremental; g(omega_r) ];
-   
-    error = norm(F);
+    
+
     counter = counter + 1;
-    uh_set(:, counter) = uh;
+    
 end
 
 % plot the solution
@@ -114,6 +129,12 @@ plot(X, Y,'r--', 'LineWidth', 2);
 xlabel("X");
 ylabel("Temperature");
 legend('FEM','EXACT','Location', 'Best', 'FontSize', 14, 'Box', 'on');
+
+log_error = log(error_set);
+figure;
+plot(log_error(1:counter-1), log_error(2:counter),'b-', 'LineWidth', 2);
+xlabel("ln(r_{n})");
+ylabel("ln(r_{n+1})");
 
 % Now we do the postprocessing
 nqp = 6;
