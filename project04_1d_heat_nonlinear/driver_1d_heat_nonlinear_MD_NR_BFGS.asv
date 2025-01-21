@@ -61,70 +61,103 @@ LM = ID (IEN);
 n_eq = n_np - 1;
 
 % initial guess
-d = zeros(n_eq,1);      % d(i)
+d = zeros(n_eq,1);
 uh = [ d; g(omega_r) ];
-
-% line search
-stol = 0.5;
 
 counter = 0;
 nmax    = 100;
 error   = 1.0;
 
+% update vectors: V and W
+V = zeros(n_eq, nmax + 1);
+W = zeros(n_eq, nmax + 1);
+
 uh_set = zeros(n_np,nmax + 1);
 error_set = zeros(nmax+1, 1);
-s_set = zeros(nmax+1,1);
 
 counter = counter + 1;
+uh_set(:,counter) = uh;
+
+% get the difference between first two residual
+% Delta F = F(i+1) - F(i)
 
 F = AssemblyF(pp,n_eq,n_en,nqp,qp,wq,IEN,ID,nElem,uh,x_coor,fun_kappa,fun_dkappa,f,h);
 error = norm(F);
+
+F_old = F;   % F(i)
+d_old = d;   % d(i)
 
 K = AssemblyK(pp,n_eq,n_en,nqp,qp,wq,IEN,ID,nElem,uh,x_coor,fun_kappa,fun_dkappa);
 uh_set(:, counter) = uh;
 error_set(counter,:) = error;
 
-while counter < nmax
+Deltad = K \ F;      % Deltad(i)
 
-    % Solve the stiffness matrix problem
-    Deltad = K \ F;      % Deltad(i)
+d = d + Deltad;      %d(i+1) = d(i) + Deltad(i)
+uh = [ d; g(omega_r) ];
 
-    d_temp = d;          % d(i)
-    G0 = Deltad' * F;    % G0 = Deltad(i) * F(i)
+counter = counter + 1;
+error_set(counter, :) = error;
 
-    d = d + Deltad;  % d(i+1) = d(i) + Deltad(i)
-    uh = [ d ; g(omega_r) ];
-    
-    % F(i+1)
-    F = AssemblyF(pp,n_eq,n_en,nqp,qp,wq,IEN,ID,nElem,uh,x_coor,fun_kappa,fun_dkappa,f,h);
+% This is the new residual F(i+1)
+F = AssemblyF(pp,n_eq,n_en,nqp,qp,wq,IEN,ID,nElem,uh,x_coor,fun_kappa,fun_dkappa,f,h);
+error
 
-    G = Deltad' * F;   % G = Deltad(i) * F(i+1)
-
-    % d(i), DEltad(i)
-    s = LineSearch_heat(G0,G,Deltad,d_temp,stol,omega_r,g,pp,n_eq,n_en,nqp,qp,wq,IEN,ID,nElem,uh,x_coor,fun_kappa,fun_dkappa,f,h);
-
-    % update the new updates
-    d = d_temp + s * Deltad;   % d(i+1) = d(i) + s*Deltad(i)
-    uh = [d; g(omega_r) ];
-
-    Deltad = d - d_temp;       % Delta(i) = d(i+1) - d(i)  
-    
-    % F(i+1)
-    F = AssemblyF(pp,n_eq,n_en,nqp,qp,wq,IEN,ID,nElem,uh,x_coor,fun_kappa,fun_dkappa,f,h);
-    error = norm(F);
-
+% BFGS start, solve K_bar * Delta d(i+1) = F(i+1)
+% where Delta d(i+1) = d(i+2) - d(i+1)
+% actually, BFGS is to find d(i+2)
+while counter < nmax && error > 1.0e-8
     counter = counter + 1;
 
-    if error <= 1.0e-8
-        uh_set(:, counter) = uh;
-        error_set(counter, :) = error;
-        s_set(counter,:) = s;
-        break;
+    F_tilde = F;    % F_tilde(0) = F(i+1)
+
+    % compute update vectors V and W
+    % V(i-k+1) = Deltad(i-k+1) / (Deltad(i-k+1) * DeltaF(i-k+1))
+    % DeltaF(i-k+1) = F(i-k+2) - F(i-k+1)
+    % Deltad(i-k+1) = d(i-k+2) - d(i-k+1)
+
+    % k = 1, i-k+1 = i, i-k+2 = i+1
+    DeltaF_k = F_tilde - F_old;     % Delta F(i-k+1) = Delta F(i) = F(i+1) - F(i)
+    Deltad_k = Deltad;              % Delta d(i-k+1) = Delta d(i) 
+
+    % V(i-k+1) = Deltad(i-k+1) / (Deltad(i-k+1) * DeltaF(i-k+1))
+    V(:,counter) = Deltad_k / (Deltad_k' * DeltaF_k);
+
+    % alpha = (-Delta F(i-k+1) * Delta d(i-k+1) / (F(i-k+1) * Delta d(i-k+1)) )^(1/2)
+    %       = (-Delta F(i) * Delta d(i) / (F(i) * Delta d(i) ) )^(1/2)
+    alpha = sqrt(  abs( -DeltaF_k' * Deltad_k / (F_old' * Deltad_k)  ) ) ;
+
+    % W(i-k+1) = alpha * F(i-k+1) - Delta F(i-k+1)
+    %          = alpha * F(i) - Delta F(i)
+    W(:,counter) = -alpha * F_old - DeltaF_k;
+
+
+
+    % Right-side updates
+    for k = 1:counter
+        F_tilde = F_tilde + (V(:, counter - k + 1)'* F_tilde) * W(:,counter - k + 1);
     end
 
+    % Solve intermediate system
+    % Deltad_tilde(0) = K^(-1) * F_tilde(i)
+    Deltad_tilde = K \ F_tilde;
+
+    % Left-side update
+    for k = 1:counter
+        Deltad_tilde = Deltad_tilde + (W(:, k)' * Deltad_tilde) * V(:, k);
+    end
+    d_old = d;             % d_old = d(i+1)
+    F_old = F;             % F_old = F(i+1)
+
+    d = d + Deltad_tilde;  % d(i+2) = d(i+1) + Deltad_tilde
+    uh = [ d ; g(omega_r) ];
+    Deltad = d - d_old;    % Deltad(i+1) = d(i+2) - d(i+1)
+  
+    % F(i+2)
+    F = AssemblyF(pp,n_eq,n_en,nqp,qp,wq,IEN,ID,nElem,uh,x_coor,fun_kappa,fun_dkappa,f,h);
+  
+    error = norm(F);
     uh_set(:, counter) = uh;
-    error_set(counter,:) = error;
-    s_set(counter,:) = s;
 end
 
 % plot the solution

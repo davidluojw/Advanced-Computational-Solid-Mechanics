@@ -24,7 +24,7 @@ g = @(x) exact(omega_r);
 % -------------------------------------------------------------------------
 
 % interpolation degree
-pp = 1;
+pp = 2;
 
 % number of elements
 nElem = 10;
@@ -64,25 +64,41 @@ n_eq = n_np - 1;
 uh = [ zeros(n_eq,1); g(omega_r) ];
 
 counter = 0;
-nmax    = 10000;
+nmax    = 16;
 error   = 1.0;
 
 uh_set = zeros(n_np,nmax + 1);
+error_set = zeros(nmax+1,1);
+
+counter = counter + 1;
+
+
+F = AssemblyF(pp,n_eq,n_en,nqp,qp,wq,IEN,ID,nElem,uh,x_coor,fun_kappa,fun_dkappa,f,h);
+error = norm(F);
 
 K = AssemblyK(pp,n_eq,n_en,nqp,qp,wq,IEN,ID,nElem,uh,x_coor,fun_kappa,fun_dkappa);
-F = AssemblyF(pp,n_eq,n_en,nqp,qp,wq,IEN,ID,nElem,uh,x_coor,fun_kappa,fun_dkappa,f,h);
+uh_set(:, counter) = uh;
+error_set(counter,:) = error;
 
-while counter < nmax && error > 1.0e-8
+while counter < nmax
 
     % Solve the stiffness matrix problem
     incremental = K \ F;
     uh = [ uh(1:end-1) + incremental; g(omega_r) ];
+
+    counter = counter + 1;
     
     F = AssemblyF(pp,n_eq,n_en,nqp,qp,wq,IEN,ID,nElem,uh,x_coor,fun_kappa,fun_dkappa,f,h);
-  
     error = norm(F);
-    counter = counter + 1;
+
+    if error <= 1.0e-8
+        uh_set(:, counter) = uh;
+        error_set(counter, :) = error;
+        break;
+    end
+
     uh_set(:, counter) = uh;
+    error_set(counter,:) = error;
 end
 
 % plot the solution

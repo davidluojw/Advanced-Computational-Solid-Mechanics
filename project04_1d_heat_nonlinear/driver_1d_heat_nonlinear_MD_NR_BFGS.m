@@ -73,25 +73,37 @@ V = zeros(n_eq, nmax + 1);
 W = zeros(n_eq, nmax + 1);
 
 uh_set = zeros(n_np,nmax + 1);
+error_set = zeros(nmax+1, 1);
+
+counter = counter + 1;
+uh_set(:,counter) = uh;
 
 % get the difference between first two residual
 % Delta F = F(i+1) - F(i)
 
 F = AssemblyF(pp,n_eq,n_en,nqp,qp,wq,IEN,ID,nElem,uh,x_coor,fun_kappa,fun_dkappa,f,h);
+error = norm(F);
 
 F_old = F;   % F(i)
 d_old = d;   % d(i)
 
 K = AssemblyK(pp,n_eq,n_en,nqp,qp,wq,IEN,ID,nElem,uh,x_coor,fun_kappa,fun_dkappa);
+uh_set(:, counter) = uh;
+error_set(counter,:) = error;
 
 Deltad = K \ F;      % Deltad(i)
 
 d = d + Deltad;      %d(i+1) = d(i) + Deltad(i)
 uh = [ d; g(omega_r) ];
 
+counter = counter + 1;
+
 % This is the new residual F(i+1)
 F = AssemblyF(pp,n_eq,n_en,nqp,qp,wq,IEN,ID,nElem,uh,x_coor,fun_kappa,fun_dkappa,f,h);
+error = norm(F);
 
+uh_set(:, counter) = uh;
+error_set(counter,:) = error;
 
 % BFGS start, solve K_bar * Delta d(i+1) = F(i+1)
 % where Delta d(i+1) = d(i+2) - d(i+1)

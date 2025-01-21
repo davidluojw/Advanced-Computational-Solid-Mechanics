@@ -24,7 +24,7 @@ g = @(x) exact(omega_r);
 % -------------------------------------------------------------------------
 
 % interpolation degree
-pp = 2;
+pp = 1;
 
 % number of elements
 nElem = 10;
@@ -61,41 +61,63 @@ LM = ID (IEN);
 n_eq = n_np - 1;
 
 % initial guess
-uh = [ zeros(n_eq,1); g(omega_r) ];
+d = zeros(n_eq,1);      % d(i)
+uh = [ d; g(omega_r) ];
+
+% line search
+stol = 0.5;
 
 counter = 0;
 nmax    = 100;
 error   = 1.0;
 
 uh_set = zeros(n_np,nmax + 1);
-error_set = zeros(nmax+1,1);
+error_set = zeros(nmax+1, 1);
 
 counter = counter + 1;
 uh_set(:, counter) = uh;
 
-while counter < nmax
+F = AssemblyF(pp,n_eq,n_en,nqp,qp,wq,IEN,ID,nElem,uh,x_coor,fun_kappa,fun_dkappa,f,h);
+error = norm(F);
 
-    
-    F = AssemblyF(pp,n_eq,n_en,nqp,qp,wq,IEN,ID,nElem,uh,x_coor,fun_kappa,fun_dkappa,f,h);
-    error = norm(F);
+K = AssemblyK(pp,n_eq,n_en,nqp,qp,wq,IEN,ID,nElem,uh,x_coor,fun_kappa,fun_dkappa);
+uh_set(:, counter) = uh;
 
-    if error <= 1.0e-8
-        uh_set(:, counter) = uh;
-        error_set(counter, :) = error;
-        break;
-    end
 
-    K = AssemblyK(pp,n_eq,n_en,nqp,qp,wq,IEN,ID,nElem,uh,x_coor,fun_kappa,fun_dkappa);
-    uh_set(:, counter) = uh;
-    error_set(counter, :) = error;
+while counter < nmax && error > 1.0e-8
 
     % Solve the stiffness matrix problem
-    incremental = K \ F;
-    uh = [ uh(1:end-1) + incremental; g(omega_r) ];
-    
+    Deltad = K \ F;      % Deltad(i)
 
-    counter = counter + 1;
+    d_temp = d;          % d(i)
+    G0 = Deltad' * F;    % G0 = Deltad(i) * F(i)
+
+    d = d + Deltad;  % d(i+1) = d(i) + Deltad(i)
+    uh = [ d ; g(omega_r) ];
     
+    % F(i+1)
+    F = AssemblyF(pp,n_eq,n_en,nqp,qp,wq,IEN,ID,nElem,uh,x_coor,fun_kappa,fun_dkappa,f,h);
+
+    G = Deltad' * F;   % G = Deltad(i) * F(i+1)
+
+    % d(i), DEltad(i)
+    s = LineSearch_heat(G0,G,Deltad,d_temp,stol,omega_r,g,pp,n_eq,n_en,nqp,qp,wq,IEN,ID,nElem,uh,x_coor,fun_kappa,fun_dkappa,f,h);
+
+    % update the new updates
+    d = d_temp + s * Deltad;   % d(i+1) = d(i) + s*Deltad(i)
+    uh = [d; g(omega_r) ];
+
+    Deltad = d - d_temp;       % Delta(i) = d(i+1) - d(i)  
+    
+    % F(i+1)
+    F = AssemblyF(pp,n_eq,n_en,nqp,qp,wq,IEN,ID,nElem,uh,x_coor,fun_kappa,fun_dkappa,f,h);
+    error = norm(F);
+    
+    counter = counter + 1;
+
+    
+    
+    uh_set(:, counter) = uh;
 end
 
 % plot the solution
@@ -129,13 +151,6 @@ plot(X, Y,'r--', 'LineWidth', 2);
 xlabel("X");
 ylabel("Temperature");
 legend('FEM','EXACT','Location', 'Best', 'FontSize', 14, 'Box', 'on');
-
-log_h = 1:counter;
-log_error = log(error_set);
-figure;
-plot(log_error(1:counter-1), log_error(2:counter),'b-', 'LineWidth', 2);
-xlabel("r_{n}");
-ylabel("r_{n+1}");
 
 % Now we do the postprocessing
 nqp = 6;
