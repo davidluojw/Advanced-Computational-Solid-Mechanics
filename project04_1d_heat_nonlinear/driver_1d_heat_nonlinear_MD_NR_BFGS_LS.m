@@ -64,6 +64,9 @@ n_eq = n_np - 1;
 d = zeros(n_eq,1);
 uh = [ d; g(omega_r) ];
 
+% line search
+stol = 0.5;
+
 counter = 0;
 nmax    = 100;
 error   = 1.0;
@@ -73,32 +76,66 @@ V = zeros(n_eq, nmax + 1);
 W = zeros(n_eq, nmax + 1);
 
 uh_set = zeros(n_np,nmax + 1);
+error_set = zeros(nmax+1, 1);
+s_set = zeros(nmax+1,1);
+
+counter = counter + 1;
 
 % get the difference between first two residual
 % Delta F = F(i+1) - F(i)
 
 F = AssemblyF(pp,n_eq,n_en,nqp,qp,wq,IEN,ID,nElem,uh,x_coor,fun_kappa,fun_dkappa,f,h);
+error = norm(F);
 
 F_old = F;   % F(i)
 d_old = d;   % d(i)
 
 K = AssemblyK(pp,n_eq,n_en,nqp,qp,wq,IEN,ID,nElem,uh,x_coor,fun_kappa,fun_dkappa);
+uh_set(:, counter) = uh;
+error_set(counter,:) = error;
 
 Deltad = K \ F;      % Deltad(i)
 
-d = d + Deltad;      %d(i+1) = d(i) + Deltad(i)
-uh = [ d; g(omega_r) ];
+%Line Search ---------------------------------
+d_temp = d;          % d(i)
+G0 = Deltad' * F;    % G0 = Deltad(i) * F(i)
+
+d = d + Deltad;  % d(i+1) = d(i) + Deltad(i)
+uh = [ d ; g(omega_r) ];
+
+% F(i+1)
+F = AssemblyF(pp,n_eq,n_en,nqp,qp,wq,IEN,ID,nElem,uh,x_coor,fun_kappa,fun_dkappa,f,h);
+
+G = Deltad' * F;   % G = Deltad(i) * F(i+1)
+
+% d(i), DEltad(i)
+s = LineSearch_heat(G0,G,Deltad,d_temp,stol,omega_r,g,pp,n_eq,n_en,nqp,qp,wq,IEN,ID,nElem,uh,x_coor,fun_kappa,fun_dkappa,f,h);
+
+% update the new updates
+d = d_temp + s * Deltad;   % d(i+1) = d(i) + s*Deltad(i)
+uh = [d; g(omega_r) ];
+
+Deltad = d - d_temp;       % Delta(i) = d(i+1) - d(i)  
+
+%Line Search ---------------------------------
+
+% d = d + Deltad;      %d(i+1) = d(i) + Deltad(i)
+% uh = [ d; g(omega_r) ];
+
+counter = counter + 1;
 
 % This is the new residual F(i+1)
 F = AssemblyF(pp,n_eq,n_en,nqp,qp,wq,IEN,ID,nElem,uh,x_coor,fun_kappa,fun_dkappa,f,h);
+error = norm(F);
 
+uh_set(:, counter) = uh;
+error_set(counter,:) = error;
+s_set(counter,:) = s;
 
 % BFGS start, solve K_bar * Delta d(i+1) = F(i+1)
 % where Delta d(i+1) = d(i+2) - d(i+1)
 % actually, BFGS is to find d(i+2)
-while counter < nmax && error > 1.0e-8
-    counter = counter + 1;
-
+while counter < nmax
     F_tilde = F;    % F_tilde(0) = F(i+1)
 
     % compute update vectors V and W
@@ -115,13 +152,11 @@ while counter < nmax && error > 1.0e-8
 
     % alpha = (-Delta F(i-k+1) * Delta d(i-k+1) / (F(i-k+1) * Delta d(i-k+1)) )^(1/2)
     %       = (-Delta F(i) * Delta d(i) / (F(i) * Delta d(i) ) )^(1/2)
-    alpha = sqrt(  abs( -DeltaF_k' * Deltad_k / (F_old' * Deltad_k)  ) ) ;
+    alpha = sqrt(  abs( - s * DeltaF_k' * Deltad_k / (F_old' * Deltad_k)  ) ) ;
 
     % W(i-k+1) = alpha * F(i-k+1) - Delta F(i-k+1)
     %          = alpha * F(i) - Delta F(i)
     W(:,counter) = -alpha * F_old - DeltaF_k;
-
-
 
     % Right-side updates
     for k = 1:counter
@@ -139,15 +174,48 @@ while counter < nmax && error > 1.0e-8
     d_old = d;             % d_old = d(i+1)
     F_old = F;             % F_old = F(i+1)
 
-    d = d + Deltad_tilde;  % d(i+2) = d(i+1) + Deltad_tilde
+    %Line Search ---------------------------------
+    d_temp = d;          % d(i+1)
+    G0 = Deltad_tilde' * F;    % G0 = Deltad_tilde(i) * F(i+1) = Deltad(i+1)*F(i+1)
+
+    d = d + Deltad_tilde;  % d(i+2) = d(i+1) + Deltad(i+1)
     uh = [ d ; g(omega_r) ];
-    Deltad = d - d_old;    % Deltad(i+1) = d(i+2) - d(i+1)
-  
+
     % F(i+2)
     F = AssemblyF(pp,n_eq,n_en,nqp,qp,wq,IEN,ID,nElem,uh,x_coor,fun_kappa,fun_dkappa,f,h);
-  
+
+    G = Deltad_tilde' * F;   % G = Deltad(i+1) * F(i+1)
+
+    % d(i+1), Deltad(i+1)
+    s = LineSearch_heat(G0,G,Deltad_tilde,d_temp,stol,omega_r,g,pp,n_eq,n_en,nqp,qp,wq,IEN,ID,nElem,uh,x_coor,fun_kappa,fun_dkappa,f,h);
+
+    % update the new updates
+    d = d_temp + s * Deltad_tilde;   % d(i+2) = d(i+1) + s*Deltad(i+1)
+    uh = [d; g(omega_r) ];
+
+    Deltad = d - d_temp;       % Delta(i+1) = d(i+2) - d(i+1)  
+    %Line Search ---------------------------------
+
+    % d = d + Deltad_tilde;  % d(i+2) = d(i+1) + Deltad_tilde
+    % uh = [ d ; g(omega_r) ];
+    % Deltad = d - d_old;    % Deltad(i+1) = d(i+2) - d(i+1)
+
+    counter = counter + 1;
+
+    % F(i+2)
+    F = AssemblyF(pp,n_eq,n_en,nqp,qp,wq,IEN,ID,nElem,uh,x_coor,fun_kappa,fun_dkappa,f,h);
     error = norm(F);
+
+    if error <= 1.0e-8
+        uh_set(:, counter) = uh;
+        error_set(counter, :) = error;
+        s_set(counter,:) = s;
+        break;
+    end
+
     uh_set(:, counter) = uh;
+    error_set(counter,:) = error;
+    s_set(counter,:) = s;
 end
 
 % plot the solution

@@ -1,8 +1,9 @@
 % This is the Newton-Raphson algorithm solver for HW3
 clear all; clc;
 
+%% x =10
 % exact internal force
-x = 15;
+x = 10;
 N1 = @(d1,d2) x * d1 ./ (10.0 - d1) - 0.5 * d2.*d2;
 N2 = @(d1,d2) d2 - d1;
 
@@ -26,18 +27,20 @@ R1 = @(d1,d2,n) N1(d1,d2) - F1(n);
 R2 = @(d1,d2,n) N2(d1,d2) - F2(n);
 
 
-% Newton-Raphson Algorithm
-% K * Deltad = -R
+% Newton-Raphson Algorithm with using arc-length method
+% [ K , -F^ext; (df/d delta_d)^T, df/d delta_lambda ] * 
+% [ Deltad; Deltalambda] = [lambda * F^ext - F^int(d); delta_a - f ]
+% f(delta_d, delta_lambda) = ()
 Deltad = zeros(2,1);
 d = zeros(2,1);
 tol = 1.0e-4;
 d_sol = zeros(2, load_num + 1);
 d_sol(:,1) = d;
-ietra
+iter_num = zeros(1, load_num+1);
 
 
 for n = 0:load_num
-    iter_num = 0;    % record the iterate numbers
+    iter_step = 0;    % record the iterate numbers
 
     R(1) = R1(d(1),d(2),n);
     R(2) = R2(d(1),d(2),n);
@@ -53,9 +56,9 @@ for n = 0:load_num
         Deltad = -J\R;
 
         d = d + Deltad;
-        iter_num = iter_num + 1;
+        iter_step = iter_step + 1;
 
-        if iter_num == 15
+        if iter_step == 15
             break;
         end
 
@@ -67,62 +70,60 @@ for n = 0:load_num
             break;
         end
     end
+    iter_num(:,n+1) = iter_step;
     d_sol(:,n+1) = d;
 end
 
 
-% plot (a) x =15
+% plot (a) x = 10
 figure;
-d_exact = linspace(-1,7,100);
+d_exact = linspace(-1,8.5,100);
 N1_exact = N1(d_exact, d_exact);
 plot(d_exact, N1_exact, LineWidth=2);
 title("N1 vs d1");
 xlabel("d1");
 ylabel("N1");
-legend("exact, x=15",'Location', 'Best', 'FontSize', 14, 'Box', 'on');
+legend("exact, x=10",'Location', 'Best', 'FontSize', 14, 'Box', 'on');
 
-%plot (b) x=15
+%plot (b) x = 10
 figure;
-d_exact = linspace(-1,7,100);
+d_exact = linspace(-1,8.5,100);
 N1_exact = N1(d_exact, d_exact);
 N1_sol = N1(d_sol(1,:), d_sol(1,:));
 plot(d_exact, N1_exact, LineWidth=2);
 hold on;
 scatter(d_sol(1,:),N1_sol,"filled");
-title("N1 vs d1 (x=15)");
+title("N1 vs d1 (x=10)");
 xlabel("d1");
 ylabel("N1");
 legend("exact","numerical",'Location', 'Best', 'FontSize', 14, 'Box', 'on');
 
-% plot (a) x = 25
+%plot (c)  x= 10
 figure;
-x = 25;
-N1 = @(d1,d2) x * d1 ./ (10.0 - d1) - 0.5 * d2.*d2;
-N2 = @(d1,d2) d2 - d1;
-N1_exact = N1(d_exact, d_exact);
-plot(d_exact, N1_exact, LineWidth=2);
-title("N1 vs d1");
-xlabel("d1");
-ylabel("N1");
-legend("exact, x=25",'Location', 'Best', 'FontSize', 14, 'Box', 'on');
+load_steps = linspace(0,load_num + 1, load_num + 1);
+scatter(load_steps, iter_num, "filled");
+title("iterations vs load_step (x=10)");
+xlim([0,42]);
+ylim([0,16]);
+xlabel("load_step");
+ylabel("iterations");
+legend("x = 10",'Location', 'Best', 'FontSize', 14, 'Box', 'on');
 
+function arc_length_solver()
+    % 定义初始条件
+    d = [0; 0]; % 初始位移
+    F_ext = [0; 0]; % 初始外部力
+    x = 1; % 参数x的值
+    arc_length = 0.1; % 弧长步长
 
-%plot (b) x=25
-figure;
-d_exact = linspace(-1,7,100);
-N1_exact = N1(d_exact, d_exact);
-N1_sol = N1(d_sol(1,:), d_sol(1,:));
-plot(d_exact, N1_exact, LineWidth=2);
-hold on;
-scatter(d_sol(1,:),N1_sol,"filled");
-title("N1 vs d1 (x=25)");
-xlabel("d1");
-ylabel("N1");
-legend("exact","numerical",'Location', 'Best', 'FontSize', 14, 'Box', 'on');
+    % 定义增量加载步长
+    load_steps = 0:0.25:10;
 
-
-
-
-
-
+    % 迭代求解
+    for F1_ext = load_steps
+        F_ext(1) = F1_ext;
+        d = solve_nonlinear_system_with_arc_length(d, F_ext, x, arc_length);
+        disp(['Load step: ', num2str(F1_ext), ', Solution: ', num2str(d')]);
+    end
+end
 

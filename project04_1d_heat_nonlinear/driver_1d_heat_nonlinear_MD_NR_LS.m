@@ -89,6 +89,7 @@ while counter < nmax
     % Solve the stiffness matrix problem
     Deltad = K \ F;      % Deltad(i)
 
+    %Line Search ---------------------------------
     d_temp = d;          % d(i)
     G0 = Deltad' * F;    % G0 = Deltad(i) * F(i)
 
@@ -108,6 +109,8 @@ while counter < nmax
     uh = [d; g(omega_r) ];
 
     Deltad = d - d_temp;       % Delta(i) = d(i+1) - d(i)  
+
+    %Line Search ---------------------------------
     
     % F(i+1)
     F = AssemblyF(pp,n_eq,n_en,nqp,qp,wq,IEN,ID,nElem,uh,x_coor,fun_kappa,fun_dkappa,f,h);

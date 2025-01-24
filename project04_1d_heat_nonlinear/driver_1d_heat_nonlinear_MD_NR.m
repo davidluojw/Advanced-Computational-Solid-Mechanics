@@ -64,7 +64,7 @@ n_eq = n_np - 1;
 uh = [ zeros(n_eq,1); g(omega_r) ];
 
 counter = 0;
-nmax    = 16;
+nmax    = 100;
 error   = 1.0;
 
 uh_set = zeros(n_np,nmax + 1);

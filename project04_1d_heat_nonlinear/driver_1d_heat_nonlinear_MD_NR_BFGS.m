@@ -76,7 +76,6 @@ uh_set = zeros(n_np,nmax + 1);
 error_set = zeros(nmax+1, 1);
 
 counter = counter + 1;
-uh_set(:,counter) = uh;
 
 % get the difference between first two residual
 % Delta F = F(i+1) - F(i)
@@ -108,9 +107,7 @@ error_set(counter,:) = error;
 % BFGS start, solve K_bar * Delta d(i+1) = F(i+1)
 % where Delta d(i+1) = d(i+2) - d(i+1)
 % actually, BFGS is to find d(i+2)
-while counter < nmax && error > 1.0e-8
-    counter = counter + 1;
-
+while counter < nmax 
     F_tilde = F;    % F_tilde(0) = F(i+1)
 
     % compute update vectors V and W
@@ -133,8 +130,6 @@ while counter < nmax && error > 1.0e-8
     %          = alpha * F(i) - Delta F(i)
     W(:,counter) = -alpha * F_old - DeltaF_k;
 
-
-
     % Right-side updates
     for k = 1:counter
         F_tilde = F_tilde + (V(:, counter - k + 1)'* F_tilde) * W(:,counter - k + 1);
@@ -154,12 +149,21 @@ while counter < nmax && error > 1.0e-8
     d = d + Deltad_tilde;  % d(i+2) = d(i+1) + Deltad_tilde
     uh = [ d ; g(omega_r) ];
     Deltad = d - d_old;    % Deltad(i+1) = d(i+2) - d(i+1)
+
+    counter = counter + 1;
   
     % F(i+2)
     F = AssemblyF(pp,n_eq,n_en,nqp,qp,wq,IEN,ID,nElem,uh,x_coor,fun_kappa,fun_dkappa,f,h);
-  
     error = norm(F);
+
+    if error <= 1.0e-8
+        uh_set(:, counter) = uh;
+        error_set(counter, :) = error;
+        break;
+    end
+
     uh_set(:, counter) = uh;
+    error_set(counter,:) = error;
 end
 
 % plot the solution
