@@ -3,7 +3,7 @@ clear all; clc;
 
 %% x =15
 % exact internal force
-x = 15;
+x = 10;
 N1 = @(d1,d2) x * d1 ./ (10.0 - d1) - 0.5 * d2.*d2;
 N2 = @(d1,d2) d2 - d1;
 

@@ -1,3 +1,275 @@
+% % This is the Newton-Raphson algorithm solver for HW3
+% clear all; clc;
+% 
+% %% x =10
+% % exact internal force
+% x = 10;
+% N1 = @(d1,d2) x * d1 ./ (10.0 - d1) - 0.5 * d2.*d2;
+% N2 = @(d1,d2) d2 - d1;
+% 
+% % Jacobian
+% J = zeros(2,2);
+% dN1_dd1 = @(d1,d2) 10*x / ((10.0-d1)*(10.0-d1));
+% dN1_dd2 = @(d1,d2) -d2;
+% dN2_dd1 = @(d1,d2) -1.0;
+% dN2_dd2 = @(d1,d2) 1.0;
+% 
+% 
+% % Arc length
+% point_num = 40;     % point numbers
+% delta_a = 0.07;      % arc-length increment
+% 
+% % arc-length function
+% % K0_tilde: the first formed/factorized matrix
+% % deltad: the total change over the step to current iterate
+% % arclength_fun = @(K0_tilde, deltad, deltalambda, c, b) deltad' * deltad + deltalambda' * deltalambda;
+% arclength_fun = @(K0_tilde, deltad, deltalambda, c, b) ...
+%           sqrt(c * (deltad .* diag(K0_tilde))' * deltad + b * deltalambda' * deltalambda);
+% 
+% b = 0.5;   % arc-length function is a circular region
+% 
+% % c
+% c_param = @(K0_tilde, q, b) (1-b) / ((q .* diag(K0_tilde))' * q);
+% 
+% % derivative of arclength function with respect to deltad
+% rfun_rdeltad = @(fun, c, K0_tilde, deltad) c / fun * diag(K0_tilde) .* deltad;
+% 
+% % derivative of arclength function with respect to delatlambda
+% rfun_rdeltalambda = @(fun, b, deltalambda) b / fun * deltalambda;
+% 
+% 
+% % external force with arc-length method
+% load_max = 10.0;
+% F1 = @() load_max;
+% F2 = @() 0.0;
+% F_ext =[F1(); F2()];
+% 
+% % Residual R with arc-length method
+% R = zeros(2,1);
+% R1 = @(d1,d2,lambda) N1(d1,d2) - lambda * F1();
+% R2 = @(d1,d2,lambda) N2(d1,d2) - lambda * F2();
+% 
+% 
+% % Newton-Raphson Algorithm with using arc-length method
+% % [ K , -F^ext; (df/d delta_d)^T, df/d delta_lambda ] * 
+% % [ Deltad; Deltalambda] = [lambda * F^ext - F^int(d); delta_a - f ]
+% % f(delta_d, delta_lambda) = ()
+% 
+% % increment of N-R ietration
+% Deltad = zeros(2,1);
+% Deltalambda = 0;
+% 
+% % increment of arc-length process
+% deltad = zeros(2,1);
+% deltalambda = 0.1;
+% 
+% % initial point value
+% d = zeros(2,1);
+% lambda = 1.0;
+% 
+% % tolerance
+% tol = 1.0e-8;
+% 
+% %  solutions recording 
+% d_sol = zeros(2, point_num + 1);
+% d_sol(:,1) = d;
+% deltad_sol = zeros(2, point_num + 1);
+% deltad_sol(:,1) = deltad;
+% lambda_sol = zeros(1, point_num + 1);
+% lambda_sol(:, 1) = lambda;
+% deltalambda_sol = zeros(1, point_num + 1);
+% deltalambda_sol(:, 1) = deltalambda;
+% iter_num = zeros(1, point_num+1);
+% detJ_set = zeros(1, point_num + 1);
+% detJ_set(:, 1) = 1.0;
+% 
+% 
+% % Arc-length process
+% for n = 2:point_num
+% 
+%     % K_tilde(d_n), d_n = d_n+1^(0)
+%     J(1,1) = dN1_dd1(d(1),d(2));
+%     J(1,2) = dN1_dd2(d(1),d(2));
+%     J(2,1) = dN2_dd1(d(1),d(2));
+%     J(2,2) = dN2_dd2(d(1),d(2));
+% 
+%     % eigenvalues = eig(J);
+%     % 
+%     % isPositiveDefinite = all(eigenvalues > 0);
+%     % 
+%     % if isPositiveDefinite == false
+%     %     deltalambda = -sign(F_ext(1)) * deltalambda;
+%     % end
+% 
+% 
+%     K0_tilde = J;
+%     detJ = det(J);      % detJ_n+1^(0)
+% 
+%     % lambda = sqrt(delta_a * delta_a / (F_ext' * F_ext + deltad' * deltad));
+%     % 
+%     % F_ext = lambda * F_ext;
+%     % d = lambda * d;
+% 
+% 
+%     % Initialization
+%     q_tilde = K0_tilde \ F_ext;             % q_tilde = K_tilde(d_n)^(-1) * F_ext, d_n = d_n+1^(0)
+% 
+%     % deltalambda_n+1^(0)
+%     c = c_param(K0_tilde, q_tilde, b);      % not change any more in this n
+% 
+%     deltalambda = delta_a / arclength_fun(K0_tilde, q_tilde, 1, c, b);  % deltalambda_n+1^(0)
+% 
+%     lambda = lambda + deltalambda;   % lambda_n+1^(1) = lambda_n+1^(0) + deltalambda_n+1^(0)
+% 
+%     % deltad_n+1^(0)
+%     deltad = deltalambda * q_tilde;  % deltad_n+1^(0) = deltalambda_n+1^(0) * q_tilde 
+%     d = d + deltad;                  % d_n+1^(1) = d_n+1^(0) + deltad_n+1^(0)
+% 
+% 
+%     d
+%     lambda
+% 
+%     iter_step = 1;   % iteration step
+%     % N-R iteration with constraint surface
+%     while true
+% 
+%         % if iter_step == 1
+%         % K_tilde(d_n+1^(i)), i = 1
+%         % J(1,1) = dN1_dd1(d(1),d(2));
+%         % J(1,2) = dN1_dd2(d(1),d(2));
+%         % J(2,1) = dN2_dd1(d(1),d(2));
+%         % J(2,2) = dN2_dd2(d(1),d(2));
+%         % detJ = det(J);    % detJ_n+1^(i)
+%         % end
+% 
+%         % eigenvalues = eig(J);
+%         % 
+%         % isPositiveDefinite = all(eigenvalues > 0);
+%         % 
+%         % if isPositiveDefinite == false
+%         %     deltalambda = -sign(F_ext(1)) * deltalambda;
+%         % end
+% 
+% 
+%         % R_n+1^(i) = F_int(d_n+1^(i)) - lambda_n+1^(i) * F_ext 
+%         R(1) = R1(d(1),d(2),lambda);
+%         R(2) = R2(d(1),d(2),lambda);
+% 
+% 
+% 
+%         % f_n+1^(i) = f(deltad_n+1^(i), deltalambda^(i)) 
+%         f_np1 = arclength_fun(K0_tilde, deltad, deltalambda, c, b);
+% 
+%         % partial f / partial deltad_n+1^(i)
+%         rfun_rdeltad_np1 = rfun_rdeltad(f_np1, c, K0_tilde, deltad);
+% 
+%         % partial f / partial deltalambda_n+1^(i)
+%         rfun_rdeltalambda_np1 = rfun_rdeltalambda(f_np1, b, deltalambda);
+% 
+%         Deltad_bar = -J \ R;
+%         q_bar =  J \ F_ext;
+% 
+%         % Deltalambda_n+1^(i)
+%         Deltalambda = ( (delta_a - f_np1) - rfun_rdeltad_np1' * Deltad_bar ) / ...
+%             (rfun_rdeltad_np1' * q_bar + rfun_rdeltalambda_np1);
+% 
+%         % Deltad_n+1^(i)
+%         Deltad = Deltalambda * q_bar + Deltad_bar;
+% 
+%         % K_extend = [J, -F_ext; rfun_rdeltad_np1', rfun_rdeltalambda_np1];
+%         % RHS = [R; f_np1 - delta_a];
+%         % 
+%         % incre = -K_extend \ RHS;
+%         % Deltad = incre(1:2);
+%         % Deltalambda = incre(3);
+% 
+%         d = d + Deltad;                 % d_n+1^(i+1) = d_n+1^(i) + Deltad_n+1^(i)
+%         lambda = lambda + Deltalambda;  % lambda_n+1^(i+1) = lambda_n+1^(i) + Deltalambda_n+1^(i)
+% 
+%         % F_ext = F_ext + Deltalambda * F_ext;
+% 
+%         d
+%         lambda
+% 
+%         iter_step = iter_step + 1;
+% 
+%         if iter_step == 100
+%             break;
+%         end
+% 
+%         % R(d_n+1^(i+1), lambda_n+1^(i+1)) = R_n+1^(i+1)
+%         R(1) = R1(d(1),d(2),lambda);
+%         R(2) = R2(d(1),d(2),lambda);
+%         R_norm = sqrt(R(1) * R(1) + R(2) * R(2));
+%         % R_norm = ( R ./ diag(K0_tilde) )' * R;
+% 
+% 
+%         deltad = d - d_sol(:, n-1);                 % deltad_n+1^(i+1) = d_n+1^(i+1) - deltad_n
+%         deltalambda = lambda - lambda_sol(:, n-1);  % deltalambda_n+1^(i+1) = lambda_n+1^(i+1) - deltalambda_n
+% 
+%         % f_n+1^(i+1) = f(deltad_n+1^(i+1), deltalambda_n+1^(i+1)) 
+%         f_np1 = arclength_fun(K0_tilde, deltad, deltalambda, c, b);
+% 
+%         f_np1
+% 
+%         if ( R_norm <= tol  &&  abs(f_np1 - delta_a) < tol ) 
+%             break;
+%         end
+% 
+%     end
+%     detJ_set(:,n) = detJ;
+% 
+%     if (sign(detJ) == -sign(detJ_set(:,n-1)))
+%         deltalambda = -sign(deltalambda_sol(:, n-1)) * abs(deltalambda);
+%     end
+% 
+%     iter_num(:,n) = iter_step;
+% 
+%     % *: convergent
+%     d_sol(:,n) = d;                      % d_n+1*
+%     lambda_sol(:,n) = lambda;            % lambda_n+1*
+%     deltad_sol(:,n) = deltad;            % deltad_n+1*
+%     deltalambda_sol(:,n) = deltalambda;  % deltalambda_n+1*
+% end
+% 
+% 
+% 
+% % plot (a) x = 10
+% figure;
+% d_exact = linspace(-1,9,100);
+% N1_exact = N1(d_exact, d_exact);
+% plot(d_exact, N1_exact, LineWidth=2);
+% title("N1 vs d1");
+% xlabel("d1");
+% ylabel("N1");
+% legend("exact, x=10",'Location', 'Best', 'FontSize', 14, 'Box', 'on');
+% 
+% %plot (b) x = 10
+% figure;
+% d_exact = linspace(-1,9,100);
+% N1_exact = N1(d_exact, d_exact);
+% N1_sol = N1(d_sol(1,:), d_sol(1,:));
+% plot(d_exact, N1_exact, LineWidth=2);
+% hold on;
+% scatter(d_sol(1,:),N1_sol,"filled");
+% title("N1 vs d1 (x=10)");
+% xlabel("d1");
+% ylabel("N1");
+% legend("exact","numerical",'Location', 'Best', 'FontSize', 14, 'Box', 'on');
+% 
+% %plot (c)  x= 10
+% figure;
+% load_steps = linspace(1,point_num + 1, point_num + 1);
+% scatter(load_steps, iter_num, "filled");
+% title("iterations vs load step (x=10)");
+% % xlim([0,]);
+% % ylim([0,16]);
+% xlabel("load step");
+% ylabel("iterations");
+% legend("x = 10",'Location', 'Best', 'FontSize', 14, 'Box', 'on');
+% 
+% 
+
 % This is the Newton-Raphson algorithm solver for HW3
 clear all; clc;
 
@@ -7,13 +279,6 @@ x = 10;
 N1 = @(d1,d2) x * d1 ./ (10.0 - d1) - 0.5 * d2.*d2;
 N2 = @(d1,d2) d2 - d1;
 
-% external force
-load_step = 0.25;
-load_max = 10.0;
-load_num = load_max / load_step;
-F1 = @(n) load_step * n;
-F2 = @(n) 0.0;
-
 % Jacobian
 J = zeros(2,2);
 dN1_dd1 = @(d1,d2) 10*x / ((10.0-d1)*(10.0-d1));
@@ -21,63 +286,177 @@ dN1_dd2 = @(d1,d2) -d2;
 dN2_dd1 = @(d1,d2) -1.0;
 dN2_dd2 = @(d1,d2) 1.0;
 
-% Residual R
+
+% Arc length
+point_num = 40;     % point numbers
+delta_a = 0.1;      % arc-length increment
+
+% arc-length function
+% deltad: the total change over the step to current iterate
+
+arclength_fun = @(deltad, deltalambda) deltad' *  deltad + deltalambda * deltalambda - delta_a * delta_a;
+
+
+% external force with arc-length method
+load_max = 10.0;
+F1 = @() load_max;
+F2 = @() 0.0;
+F_ext =[F1(); F2()];
+
+% Residual R with arc-length method
 R = zeros(2,1);
-R1 = @(d1,d2,n) N1(d1,d2) - F1(n);
-R2 = @(d1,d2,n) N2(d1,d2) - F2(n);
+R1 = @(d1,d2,lambda) lambda * F1() - N1(d1,d2);
+R2 = @(d1,d2,lambda) lambda * F2() - N2(d1,d2);
 
 
 % Newton-Raphson Algorithm with using arc-length method
-% [ K , -F^ext; (df/d delta_d)^T, df/d delta_lambda ] * 
-% [ Deltad; Deltalambda] = [lambda * F^ext - F^int(d); delta_a - f ]
-% f(delta_d, delta_lambda) = ()
+
+% increment of N-R iteration
 Deltad = zeros(2,1);
+Deltalambda = 0;
+
+% increment of the load step
+deltad = zeros(2,1);
+deltalambda = 0;
+
+% initial point value
 d = zeros(2,1);
-tol = 1.0e-4;
-d_sol = zeros(2, load_num + 1);
+lambda = 0.0;
+
+% tolerance
+tol = 1.0e-8;
+
+%  solutions recording 
+d_sol = zeros(2, point_num + 1);            % stored convergent d_n+1 at every load step
 d_sol(:,1) = d;
-iter_num = zeros(1, load_num+1);
+lambda_sol = zeros(1, point_num + 1);      % stored convergent lambda_n+1 at every load step
+lambda_sol(:, 1) = lambda;
+
+deltad_set = zeros(2, point_num + 1);       % stored deltad_n^(0)) at every load step
+deltad_set(:,1) = deltad;
+deltalambda_set = zeros(1, point_num + 1);  % stored deltalambda_n^(0) at every load step
+deltalambda_set(:, 1) = deltalambda;  
+iter_set = zeros(1, point_num+1);     % stored convergent iterate number at every load step
+detJ_set = zeros(1, point_num + 1);   % stored detK(d_n^(0)) at every load step
 
 
-for n = 0:load_num
-    iter_step = 0;    % record the iterate numbers
+% Arc-length process
+for n = 1:point_num
 
-    R(1) = R1(d(1),d(2),n);
-    R(2) = R2(d(1),d(2),n);
-    R_norm = sqrt(R(1) * R(1) + R(2) * R(2));
-    R_norm0 = R_norm;
+    % Initialization, Predictor
+    d_n = d;
+    lambda_n = lambda;
 
-    while true
-        J(1,1) = dN1_dd1(d(1),d(2));
-        J(1,2) = dN1_dd2(d(1),d(2));
-        J(2,1) = dN2_dd1(d(1),d(2));
-        J(2,2) = dN2_dd2(d(1),d(2));
+    % K(d_n+1^(0))
+    J(1,1) = dN1_dd1(d(1),d(2));
+    J(1,2) = dN1_dd2(d(1),d(2));
+    J(2,1) = dN2_dd1(d(1),d(2));
+    J(2,2) = dN2_dd2(d(1),d(2));
+    K0 = J;
+    detJ = det(J);   % det K(d_n+1^(0))
+    detJ_set(:, n) = detJ;
+    
+     
+    q_bar = K0 \ F_ext;          % q_bar = K(d_n+1^(0))^(-1) * F_ext    
 
-        Deltad = -J\R;
-
-        d = d + Deltad;
-        iter_step = iter_step + 1;
-
-        if iter_step == 15
-            break;
-        end
-
-        R(1) = R1(d(1),d(2),n);
-        R(2) = R2(d(1),d(2),n);
-        R_norm = sqrt(R(1) * R(1) + R(2) * R(2));
-
-        if R_norm <= tol * R_norm0
-            break;
+    if n == 1
+        % 手动设置
+        Deltalambda = sqrt( delta_a * delta_a / (1 + q_bar' * q_bar));  % Deltalambda^(0)
+    else
+        % the sign of Deltalambda is based on the sign of detK at previous
+        % load step 
+        if sign(detJ) == -sign(detJ_set(:,n-1))
+            Deltalambda = -sign(deltalambda_set(:, n-1));   % Deltalambda^(0)
+        else
+            Deltalambda = sign(deltalambda_set(:, n-1));    % Deltalambda^(0)
         end
     end
-    iter_num(:,n+1) = iter_step;
-    d_sol(:,n+1) = d;
+
+    Deltad = Deltalambda * q_bar;  % Deltad^(0) = Deltalambda^(0)* q_bar
+
+    % Update points
+    d = d + Deltad;   % d_n+1^(1) = d_n+1^(0) + Deltad^(0)
+    lambda = lambda + Deltalambda;   % lambda_n+1^(1) = lambda_n+1^(0) + Deltalambda^(0)
+
+    deltad = Deltad;              % deltad^(0)
+    deltalambda = Deltalambda;    % deltalambda^(0)
+    deltad_set(:, n) = deltad;
+    deltalambda_set(:,n) = deltalambda; 
+ 
+
+    iter_step = 1;   % iteration step
+    % N-R iteration with constraint surface
+    while true
+
+        q_bar = K0 \ F_ext;     % q_bar = K(d_n+1^(0))^(-1) * F_ext 
+
+        % R(d_n+1^(i), lambda_n+1^(i))
+        R(1) = R1(d(1),d(2),lambda);
+        R(2) = R2(d(1),d(2),lambda);
+
+        Deltad_bar = K0 \ R;    % Deltad_bar = K(d_n+1^(0))^(-1) * R(d_n+1^(i), lambda_n+1^(i))
+
+        deltad = d - d_n;                 % deltad^(i) = d_n+1^(i) - d_n
+        deltalambda = lambda - lambda_n;  % deltalambda^(i) = lambda_n+1^(i) - lambda_n
+
+        f_np1 = arclength_fun(deltad, deltalambda);  % f(d_n+1^(i), lambda_n+1^(0))
+
+        % Deltalambda^(i)
+        Deltalambda = ( - f_np1 - 2 * deltad' * Deltad_bar ) / ( 2 * deltad' * q_bar + 2 * deltalambda * deltalambda);
+
+        % Deltad^(i) = Deltalambda^(i) * q_bar + Deltad_bar
+        Deltad = Deltalambda * q_bar + Deltad_bar;
+
+        % Update points
+        d = d + Deltad;                 % d_n+1^(i+1) = d_n+1^(i) + Deltad^(i)
+        lambda = lambda + Deltalambda;  % lambda_n+1^(i+1) = lambda_n+1^(i) + Deltalambda^(i)
+
+        iter_step = iter_step + 1;
+    
+        if iter_step == 100
+            break;
+        end
+
+        % R(d_n+1^(i+1), lambda_n+1^(i+1)) = R_n+1^(i+1)
+        R(1) = R1(d(1),d(2),lambda);
+        R(2) = R2(d(1),d(2),lambda);
+        R_norm = sqrt(R(1) * R(1) + R(2) * R(2));
+        % R_norm = ( R ./ diag(K0_tilde) )' * R;
+
+
+        deltad = d - d_sol(:, n-1);                 % deltad_n+1^(i+1) = d_n+1^(i+1) - deltad_n
+        deltalambda = lambda - lambda_sol(:, n-1);  % deltalambda_n+1^(i+1) = lambda_n+1^(i+1) - deltalambda_n
+
+        % f_n+1^(i+1) = f(deltad_n+1^(i+1), deltalambda_n+1^(i+1)) 
+        f_np1 = arclength_fun(K0_tilde, deltad, deltalambda, c, b);
+
+        f_np1
+    
+        if ( R_norm <= tol  &&  abs(f_np1 - delta_a) < tol ) 
+            break;
+        end
+
+    end
+    detJ_set(:,n) = detJ;
+
+    if (sign(detJ) == -sign(detJ_set(:,n-1)))
+        deltalambda = -sign(deltalambda_sol(:, n-1)) * abs(deltalambda);
+    end
+
+    iter_num(:,n) = iter_step;
+
+    % *: convergent
+    d_sol(:,n) = d;                      % d_n+1*
+    lambda_sol(:,n) = lambda;            % lambda_n+1*
+    deltad_sol(:,n) = deltad;            % deltad_n+1*
+    deltalambda_sol(:,n) = deltalambda;  % deltalambda_n+1*
 end
+
 
 
 % plot (a) x = 10
 figure;
-d_exact = linspace(-1,8.5,100);
+d_exact = linspace(-1,9,100);
 N1_exact = N1(d_exact, d_exact);
 plot(d_exact, N1_exact, LineWidth=2);
 title("N1 vs d1");
@@ -87,7 +466,7 @@ legend("exact, x=10",'Location', 'Best', 'FontSize', 14, 'Box', 'on');
 
 %plot (b) x = 10
 figure;
-d_exact = linspace(-1,8.5,100);
+d_exact = linspace(-1,9,100);
 N1_exact = N1(d_exact, d_exact);
 N1_sol = N1(d_sol(1,:), d_sol(1,:));
 plot(d_exact, N1_exact, LineWidth=2);
@@ -100,30 +479,13 @@ legend("exact","numerical",'Location', 'Best', 'FontSize', 14, 'Box', 'on');
 
 %plot (c)  x= 10
 figure;
-load_steps = linspace(0,load_num + 1, load_num + 1);
+load_steps = linspace(1,point_num + 1, point_num + 1);
 scatter(load_steps, iter_num, "filled");
-title("iterations vs load_step (x=10)");
-xlim([0,42]);
-ylim([0,16]);
-xlabel("load_step");
+title("iterations vs load step (x=10)");
+% xlim([0,]);
+% ylim([0,16]);
+xlabel("load step");
 ylabel("iterations");
 legend("x = 10",'Location', 'Best', 'FontSize', 14, 'Box', 'on');
 
-function arc_length_solver()
-    % 定义初始条件
-    d = [0; 0]; % 初始位移
-    F_ext = [0; 0]; % 初始外部力
-    x = 1; % 参数x的值
-    arc_length = 0.1; % 弧长步长
-
-    % 定义增量加载步长
-    load_steps = 0:0.25:10;
-
-    % 迭代求解
-    for F1_ext = load_steps
-        F_ext(1) = F1_ext;
-        d = solve_nonlinear_system_with_arc_length(d, F_ext, x, arc_length);
-        disp(['Load step: ', num2str(F1_ext), ', Solution: ', num2str(d')]);
-    end
-end
 
