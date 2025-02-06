@@ -1,5 +1,5 @@
 
-% This is the Newton-Raphson algorithm solver for HW3
+% This is the Newton-Raphson-Arclength algorithm solver
 clear all; clc;
 
 %% x =10
@@ -27,7 +27,7 @@ arclength_fun = @(deltad, deltalambda) deltad' *  deltad + deltalambda * deltala
 
 
 % external force with arc-length method
-load_max = 10.0;
+load_max = 20.0;
 F1 = @() load_max;
 F2 = @() 0.0;
 F_ext =[F1(); F2()];
