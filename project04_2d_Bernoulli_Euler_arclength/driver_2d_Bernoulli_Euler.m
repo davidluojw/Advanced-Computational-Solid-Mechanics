@@ -35,12 +35,13 @@ clear; clc;
 % model data
 L = 120;
 E = 7.2e6;
-I = 2.0;
+I = 3.0;
 A = 6;
 nu = 0.3;
 
 f = @(x) 0;
-F_applied = -40000;
+F_applied = -40000
+;
 M = 0;
 Q = 0;
 g1 = 0;
@@ -121,7 +122,14 @@ for ee = 1 : n_el
     end
 end
 
+% Arc length
+point_num = 40;     % point numbers
+delta_a = 0.3;      % arc-length increment
 
+% arc-length function
+% deltad: the total change over the step to current iterate
+
+arclength_fun = @(deltad, deltalambda) deltad' *  deltad + deltalambda * deltalambda - delta_a * delta_a;
 
 % =========================================================================
 % generate the quadrature rule
@@ -131,28 +139,31 @@ end
 K = spalloc(n_eq, n_eq, 7*n_eq); % allocate the global stiffness matrix
 F = zeros(n_eq, 1);              % allocate the global load vector
 
+x_ele = [0, hh; hh, 2*hh; 2*hh, 3*hh; 3*hh, 4*hh; 4*hh, 5*hh;
+         0, hh; hh, 2*hh; 2*hh, 3*hh; 3*hh, 4*hh; 4*hh, 5*hh];
+
 % Assembly of K and F
 for ee = 1 : n_el
     k_e = zeros(n_ee, n_ee);         % dimension of element stiffness is n_ee x n_ee
     f_e = zeros(n_ee, 1);            % element force nodes
 
     % there is only one variable field in each element
-    x_ele = zeros(n_en, 1);
-
-    for aa = 1:n_en
-        AA = IEN(aa, ee);
-        if AA <= mid_pt
-            x_ele(aa) = y_coor(AA);
-        else
-            x_ele(aa) = x_coor(AA);
-        end
-    end
+    % x_ele = zeros(n_en, 1);
+    % 
+    % for aa = 1:n_en
+    %     AA = IEN(aa, ee);
+    %     if AA <= mid_pt
+    %         x_ele(aa) = y_coor(AA);
+    %     else
+    %         x_ele(aa) = x_coor(AA);
+    %     end
+    % end
 
     % loop over quadrature points
     for ll = 1 : n_int
 
         dx_dxi = hh / 2;
-        x_l = (hh * xi(ll) + x_ele(1) + x_ele(2)) / 2;
+        x_l = (hh * xi(ll) + x_ele(ee, 1) + x_ele(ee, 2)) / 2;
 
         dxi_dx = 1.0 / dx_dxi;
     
@@ -187,7 +198,23 @@ for ee = 1 : n_el
     % Compute the rotation matrix
     node1 = [ x_coor(IEN(1, ee)) ,   y_coor(IEN(1, ee))    ];
     node2 = [ x_coor(IEN(n_en, ee)), y_coor(IEN(n_en, ee)) ];
-    T = RotationMatrix(node1, node2);
+    
+    % 计算单元方向向量
+    dx = node2(1) - node1(1);
+    dy = node2(2) - node1(2);
+    L = sqrt(dx^2 + dy^2);
+    
+    % 计算方向余弦
+    cos_theta = dx / L;
+    sin_theta = dy / L;
+    
+    % 构造旋转矩阵
+    T = [cos_theta,  sin_theta, 0, 0, 0, 0;
+         -sin_theta, cos_theta, 0, 0, 0, 0;
+         0,          0,         1, 0, 0, 0;
+         0,          0,         0, cos_theta, sin_theta, 0;
+         0,          0,         0, -sin_theta, cos_theta, 0;
+         0,          0,         0, 0, 0, 1];
 
     % Trandform the stiffness matrix in terms of the global coordinates
     k_e = T' * k_e * T;
@@ -217,7 +244,7 @@ for ee = 1 : n_el
 
     for aa = 1:n_en
         AA = IEN(aa, ee);
-        if x_coor(AA) == L / (n_el / 2) && y_coor(AA) == L
+        if AA == floor(n_np / 2) + 2
             F(LM(2, AA)) = F_applied;
         end
     end
@@ -226,7 +253,7 @@ end
 % =========================================================================
 % Now we have K and F assembled and we solve the linear system Kd = F
 d_temp = K \ F;
-
+detK = det(K);
 % Solve linear system using gmres x = gmres(A,b,restart,tol)
 % restart = 10000;
 % tol = 10e-6;
