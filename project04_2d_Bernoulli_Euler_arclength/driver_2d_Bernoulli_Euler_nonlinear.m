@@ -427,20 +427,21 @@ for col=1:floor(size_iter / 20):size_iter
 end
 hold off;
 
+figure;
+for ii = 1:n_np
+    if Node(ii).x == 24
+        plot(Results.disp_iter(Node(ii).dof(1),:),Results.lambda_iter,'Marker','x','MarkerSize',3);
+    end
+end
 
 figure;
 for ii = 1:n_np
-    if Node(ii).x == 12
+    if Node(ii).x == 24
         plot(Results.disp_iter(Node(ii).dof(2),:),Results.lambda_iter,'Marker','x','MarkerSize',3);
     end
 end
 
-figure;
-for ii = 1:n_np
-    if Node(ii).x == 12
-        plot(Results.disp_iter(Node(ii).dof(1),:),Results.lambda_iter,'Marker','x','MarkerSize',3);
-    end
-end
+
 
 
 % plot3(Result.U_step(Node(nid(1)).dof(d(1)),:),Result.U_step(Node(nid(2)).dof(d(2)),:),Result.lr_step);
